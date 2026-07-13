@@ -15,6 +15,10 @@
                             class="fa fa-fw fa-check-square-o"></i><span> Compliance </span> </a>
                 </li>
                 <li class="submenu">
+                    <a id="mnuPoam" href="/poam.html" title="View and edit your live POA&amp;M records"><i
+                            class="fa fa-fw fa-tasks"></i><span> POA&amp;M </span> </a>
+                </li>
+                <li class="submenu">
                     <a id="mnuTemplates" href="/templates.html" title="View your OpenRMF Template Checklists"><i
                             class="fa fa-fw fa-list"></i><span> Templates </span> </a>
                 </li>
@@ -62,6 +66,8 @@
         $("#mnuSystemPackages").addClass("active");
     } else if ( document.URL.includes("/compliance.html") ) {
         $("#mnuCompliance").addClass("active");
+    } else if ( document.URL.includes("/poam.html") ) {
+        $("#mnuPoam").addClass("active");
     } else if ( document.URL.includes("/templates.html") || document.URL.includes("/single-template.html") ) {
         $("#mnuTemplates").addClass("active");
     } else if ( document.URL.includes("/upload.html") ) {

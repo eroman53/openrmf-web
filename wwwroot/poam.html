@@ -1,0 +1,507 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>OpenRMF OSS Live POA&amp;M</title>
+	<meta name="description" content="OpenRMF Live Plan of Action and Milestones">
+	<meta name="referrer" content="origin">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="/assets/images/favicon.ico">
+
+	<!-- Bootstrap CSS -->
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Font Awesome CSS -->
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Custom CSS -->
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+
+	<!-- BEGIN CSS for this page -->
+	<link rel="stylesheet" type="text/css" href="/assets/css/dataTables.bootstrap4.min.css" />
+	<!-- END CSS for this page -->
+
+</head>
+
+<body class="adminbody">
+
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+
+		<!-- top bar navigation -->
+		<div id="includeNavBarLink"></div>
+		<!-- End Navigation -->
+
+		<!-- Left Sidebar -->
+		<div id="includeSidebarLink"></div>
+		<!-- End Sidebar -->
+
+		<div class="content-page">
+			<!-- Start content -->
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Live POA&amp;M</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">POA&amp;M</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+					<!-- end row -->
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-6 col-xl-6">
+							<div class="card mb-3">
+								<div class="card-header">
+									<h3><i class="fa fa-filter"></i> Filters</h3>
+								</div>
+								<div class="card-body">
+									<div>
+										<form>
+											<div class="form-group">
+												<label class="checklistSystemsListLabel" id="checklistSystemsListLabel"
+													for="checklistSystemFilter">System Package Filter</label>
+												<select class="form-control" id="checklistSystemFilter">
+													<option value="">[ Choose a System Package ]</option>
+												</select>
+												<small id="titleSystem" class="form-text text-muted">Specify the System
+													Package</small>
+											</div>
+											<div class="form-group">
+												<label for="poamStatusFilter">Status Filter</label>
+												<select class="form-control" id="poamStatusFilter">
+													<option value="">All Statuses</option>
+													<option value="Draft">Draft</option>
+													<option value="Ongoing">Ongoing</option>
+													<option value="Completed - Pending Verification">Completed - Pending Verification</option>
+													<option value="Completed">Completed</option>
+													<option value="Risk Accepted">Risk Accepted</option>
+												</select>
+											</div>
+											<div class="form-group">
+												<button type="button" title="Load the POA&amp;M items"
+													class="btn btn-sm btn-primary"
+													onclick="getPoamItems();">Load POA&amp;M</button>
+												<button type="button" title="Export the POA&amp;M record as XLSX"
+													class="btn btn-sm btn-info"
+													onclick="exportPoamRecord();"><i class="fa fa-download"></i>
+													Export XLSX</button>
+												<button type="button" title="Add a manual POA&amp;M item"
+													class="btn btn-sm btn-success" id="btnNewPoamItem" style="display: none;"
+													onclick="newPoamItem();"><i class="fa fa-plus"></i> New Item</button>
+											</div>
+										</form>
+									</div>
+								</div><!-- end card body -->
+							</div><!-- end card-->
+						</div>
+					</div><!-- end row-->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header">
+									<h3 id="poamListingTitle"><i class="fa fa-tasks"></i> POA&amp;M Items</h3>
+								</div>
+								<div class="card-body">
+									<div>
+										<table id="tblPoamItems" style="width: 100%;"
+											class="table table-bordered table-hover display">
+											<thead>
+												<tr>
+													<th>Title</th>
+													<th>Host</th>
+													<th>Source</th>
+													<th>Severity</th>
+													<th>Status</th>
+													<th>Scheduled</th>
+													<th>First Seen</th>
+													<th>Last Seen</th>
+													<th></th>
+												</tr>
+											</thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div><!-- end card body -->
+							</div><!-- end card-->
+						</div>
+					</div><!-- end row-->
+
+				</div>
+				<!-- END container-fluid -->
+
+			</div>
+			<!-- END content -->
+
+		</div>
+		<!-- END content-page -->
+
+		<footer class="footer">
+			<div id="includeFooterLink"></div>
+		</footer>
+		<div id="includeAutoLogin"></div>
+
+	</div>
+	<!-- END main -->
+
+	<!-- POA&M item edit modal -->
+	<div class="modal fade" id="poamEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="poamEditModalTitle">Edit POA&amp;M Item</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<form>
+						<input type="hidden" id="frmPoamId" />
+						<div class="form-group" id="grpPoamTitle">
+							<label for="frmPoamTitle">Title</label>
+							<input type="text" class="form-control" id="frmPoamTitle" />
+						</div>
+						<div class="form-row">
+							<div class="form-group col-md-6">
+								<label for="frmPoamStatus">Status</label>
+								<select class="form-control" id="frmPoamStatus">
+									<option value="Draft">Draft</option>
+									<option value="Ongoing">Ongoing</option>
+									<option value="Completed - Pending Verification">Completed - Pending Verification</option>
+									<option value="Completed">Completed</option>
+									<option value="Risk Accepted">Risk Accepted</option>
+								</select>
+							</div>
+							<div class="form-group col-md-6">
+								<label for="frmPoamScheduled">Scheduled Completion Date</label>
+								<input type="date" class="form-control" id="frmPoamScheduled" />
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group col-md-6">
+								<label for="frmPoamSecurityControl">Security Control Acronym</label>
+								<input type="text" class="form-control" id="frmPoamSecurityControl" />
+							</div>
+							<div class="form-group col-md-6">
+								<label for="frmPoamOfficeOrg">Office / Org</label>
+								<input type="text" class="form-control" id="frmPoamOfficeOrg" />
+							</div>
+						</div>
+						<div class="form-group">
+							<label for="frmPoamMilestones">Milestones with Completion Date</label>
+							<textarea class="form-control" id="frmPoamMilestones" rows="3"></textarea>
+						</div>
+						<div class="form-group">
+							<label for="frmPoamMilestoneChanges">Milestone Changes</label>
+							<textarea class="form-control" id="frmPoamMilestoneChanges" rows="2"></textarea>
+						</div>
+						<div class="form-group">
+							<label for="frmPoamMitigations">Mitigations</label>
+							<textarea class="form-control" id="frmPoamMitigations" rows="3"></textarea>
+						</div>
+						<div class="form-group">
+							<label for="frmPoamResources">Resources Required</label>
+							<input type="text" class="form-control" id="frmPoamResources" />
+						</div>
+						<div class="form-group">
+							<label for="frmPoamComments">Comments</label>
+							<textarea class="form-control" id="frmPoamComments" rows="2"></textarea>
+						</div>
+						<div class="form-row">
+							<div class="form-group col-md-4">
+								<label for="frmPoamResidualRisk">Residual Risk Level</label>
+								<input type="text" class="form-control" id="frmPoamResidualRisk" />
+							</div>
+							<div class="form-group col-md-4">
+								<label for="frmPoamLikelihood">Likelihood</label>
+								<input type="text" class="form-control" id="frmPoamLikelihood" />
+							</div>
+							<div class="form-group col-md-4">
+								<label for="frmPoamImpact">Impact</label>
+								<input type="text" class="form-control" id="frmPoamImpact" />
+							</div>
+						</div>
+						<div class="form-group">
+							<label for="frmPoamImpactDescription">Impact Description</label>
+							<textarea class="form-control" id="frmPoamImpactDescription" rows="2"></textarea>
+						</div>
+						<div class="form-group">
+							<label for="frmPoamRecommendations">Recommendations</label>
+							<textarea class="form-control" id="frmPoamRecommendations" rows="2"></textarea>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary" id="btnSavePoamItem" onclick="savePoamItem();">Save</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- END POA&M item edit modal -->
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/moment.min.js"></script>
+
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+
+	<!-- App js -->
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/js/jquery.dataTables.min.js"></script>
+	<script src="/assets/js/dataTables.bootstrap4.min.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<!-- BEGIN Java Script for this page -->
+	<script>
+		var tablePoam = null;
+		var poamItemsById = {};
+		var editingIsNew = false;
+
+		function poamSeverityBadge(rawSeverity) {
+			var sev = (rawSeverity || "").toLowerCase();
+			if (sev == "critical" || sev == "high")
+				return '<span style="padding: 5px;" class="vulnOpenCAT1">' + htmlEscape(rawSeverity) + '</span>';
+			if (sev == "medium")
+				return '<span style="padding: 5px;" class="vulnOpenCAT2">' + htmlEscape(rawSeverity) + '</span>';
+			if (sev == "low")
+				return '<span style="padding: 5px;" class="vulnOpenCAT3">' + htmlEscape(rawSeverity) + '</span>';
+			return htmlEscape(rawSeverity || "");
+		}
+
+		async function getPoamItems() {
+			var systemGroupId = $("#checklistSystemFilter").val();
+			if (!systemGroupId || systemGroupId.length == 0) {
+				swal("Please choose a system package.", "Click OK to continue!", "error");
+				return;
+			}
+			$.blockUI({ message: "Loading the POA&M items...please wait", css: { padding: '15px' } });
+			var url = poamAPI + "poam/system/" + encodeURIComponent(systemGroupId);
+			var status = $("#poamStatusFilter").val();
+			if (status) url += "?status=" + encodeURIComponent(status);
+			let response = await fetch(url, { headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (response.ok) {
+				var data = await response.json();
+				poamItemsById = {};
+				data.forEach(function (item) { poamItemsById[item.internalIdString] = item; });
+				tablePoam.clear();
+				tablePoam.rows.add(data).draw();
+			} else {
+				swal("There was a problem loading the POA&M items.", "Click OK to continue!", "error");
+			}
+			$.unblockUI();
+		}
+
+		function newPoamItem() {
+			var systemGroupId = $("#checklistSystemFilter").val();
+			if (!systemGroupId || systemGroupId.length == 0) {
+				swal("Please choose a system package first.", "Click OK to continue!", "error");
+				return;
+			}
+			editingIsNew = true;
+			$("#frmPoamId").val("");
+			$("#poamEditModalTitle").text("New Manual POA&M Item");
+			$("#grpPoamTitle").show();
+			$("#frmPoamTitle").val("");
+			$("#frmPoamStatus").val("Draft");
+			$("#frmPoamScheduled").val("");
+			$("#frmPoamSecurityControl").val("");
+			$("#frmPoamOfficeOrg").val("");
+			$("#frmPoamMilestones").val("");
+			$("#frmPoamMilestoneChanges").val("");
+			$("#frmPoamMitigations").val("");
+			$("#frmPoamResources").val("");
+			$("#frmPoamComments").val("");
+			$("#frmPoamResidualRisk").val("");
+			$("#frmPoamLikelihood").val("");
+			$("#frmPoamImpact").val("");
+			$("#frmPoamImpactDescription").val("");
+			$("#frmPoamRecommendations").val("");
+			$("#poamEditModal").modal("show");
+		}
+
+		function editPoamItem(id) {
+			var item = poamItemsById[id];
+			if (!item) return;
+			editingIsNew = false;
+			$("#frmPoamId").val(id);
+			$("#poamEditModalTitle").text("Edit POA&M Item");
+			if (item.isManual) { $("#grpPoamTitle").show(); } else { $("#grpPoamTitle").hide(); }
+			$("#frmPoamTitle").val(item.title || "");
+			$("#frmPoamStatus").val(item.status || "Draft");
+			$("#frmPoamScheduled").val(item.scheduledCompletionDate ? moment(item.scheduledCompletionDate).format("YYYY-MM-DD") : "");
+			$("#frmPoamSecurityControl").val(item.securityControl || "");
+			$("#frmPoamOfficeOrg").val(item.officeOrg || "");
+			$("#frmPoamMilestones").val(item.milestones || "");
+			$("#frmPoamMilestoneChanges").val(item.milestoneChanges || "");
+			$("#frmPoamMitigations").val(item.mitigations || "");
+			$("#frmPoamResources").val(item.resources || "");
+			$("#frmPoamComments").val(item.comments || "");
+			$("#frmPoamResidualRisk").val(item.residualRiskLevel || "");
+			$("#frmPoamLikelihood").val(item.likelihood || "");
+			$("#frmPoamImpact").val(item.impact || "");
+			$("#frmPoamImpactDescription").val(item.impactDescription || "");
+			$("#frmPoamRecommendations").val(item.recommendations || "");
+			$("#poamEditModal").modal("show");
+		}
+
+		async function savePoamItem() {
+			var body = {
+				title: $("#frmPoamTitle").val(),
+				status: $("#frmPoamStatus").val(),
+				scheduledCompletionDate: $("#frmPoamScheduled").val() ? $("#frmPoamScheduled").val() : null,
+				securityControl: $("#frmPoamSecurityControl").val(),
+				officeOrg: $("#frmPoamOfficeOrg").val(),
+				milestones: $("#frmPoamMilestones").val(),
+				milestoneChanges: $("#frmPoamMilestoneChanges").val(),
+				mitigations: $("#frmPoamMitigations").val(),
+				resources: $("#frmPoamResources").val(),
+				comments: $("#frmPoamComments").val(),
+				residualRiskLevel: $("#frmPoamResidualRisk").val(),
+				likelihood: $("#frmPoamLikelihood").val(),
+				impact: $("#frmPoamImpact").val(),
+				impactDescription: $("#frmPoamImpactDescription").val(),
+				recommendations: $("#frmPoamRecommendations").val()
+			};
+			var url, method;
+			if (editingIsNew) {
+				url = poamAPI + "poam/system/" + encodeURIComponent($("#checklistSystemFilter").val());
+				method = "POST";
+			} else {
+				url = poamAPI + "poam/" + encodeURIComponent($("#frmPoamId").val());
+				method = "PUT";
+			}
+			let response = await fetch(url, {
+				method: method,
+				headers: {
+					'Authorization': 'Bearer ' + keycloak.token,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(body)
+			});
+			if (response.ok) {
+				$("#poamEditModal").modal("hide");
+				swal("The POA&M item was saved.", "Click OK to continue!", "success");
+				getPoamItems();
+			} else {
+				swal("There was a problem saving the POA&M item.", "Click OK to continue!", "error");
+			}
+		}
+
+		function exportPoamRecord() {
+			var systemGroupId = $("#checklistSystemFilter").val();
+			if (!systemGroupId || systemGroupId.length == 0) {
+				swal("Please choose a system package.", "Click OK to continue!", "error");
+				return;
+			}
+			$.blockUI({ message: "Generating the POA&M Excel export...please wait", css: { padding: '15px' } });
+			var url = poamAPI + "poam/system/" + encodeURIComponent(systemGroupId) + "/export";
+			var request = new XMLHttpRequest();
+			request.open('GET', url, true);
+			request.setRequestHeader('Authorization', 'Bearer ' + keycloak.token);
+			request.responseType = 'blob';
+			request.onload = function (e) {
+				if (this.status === 200) {
+					var blob = this.response;
+					var downloadLink = window.document.createElement('a');
+					var contentTypeHeader = request.getResponseHeader("Content-Type");
+					var d = new Date();
+					var strDate = d.getFullYear().toString() + "-" + (d.getMonth() + 1).toString() + "-" + d.getDate().toString() + "-" + d.getHours().toString() + "-" + d.getMinutes().toString() + "-" + d.getSeconds().toString();
+					downloadLink.href = window.URL.createObjectURL(new Blob([blob], { type: contentTypeHeader }));
+					downloadLink.download = "POAM-" + strDate + ".xlsx";
+					document.body.appendChild(downloadLink);
+					downloadLink.click();
+					document.body.removeChild(downloadLink);
+				} else {
+					alert("There was a problem exporting your POA&M.")
+				}
+				$.unblockUI();
+			};
+			request.send();
+		}
+
+		$(document).ready(function () {
+			// authentication first
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					// setup the User Interface
+					setupOpenRMFUI();
+					getChecklistSystemsForReportFilter();
+					if (canUpload()) $("#btnNewPoamItem").show();
+
+					tablePoam = $('#tblPoamItems').DataTable({
+						"responsive": false,
+						"searching": true,
+						"pageLength": 25,
+						"autoWidth": false,
+						"deferRender": true,
+						"data": [],
+						"columns": [
+							{ "data": null, "render": function (data) { return htmlEscape(data.title || ""); } },
+							{ "data": null, "render": function (data) { return htmlEscape(data.hostname || ""); } },
+							{ "data": null, "render": function (data) { return htmlEscape(data.sourceType || "") + (data.vulnId ? " " + htmlEscape(data.vulnId) : (data.pluginId ? " " + htmlEscape(data.pluginId) : "")); } },
+							{ "data": null, "className": 'text-center', "render": function (data) { return poamSeverityBadge(data.rawSeverity); } },
+							{ "data": null, "render": function (data) { return htmlEscape(data.status || ""); } },
+							{ "data": null, "render": function (data) { return data.scheduledCompletionDate ? moment(data.scheduledCompletionDate).format("MM/DD/YYYY") : ""; } },
+							{ "data": null, "render": function (data) { return data.firstSeen ? moment(data.firstSeen).format("MM/DD/YYYY") : ""; } },
+							{ "data": null, "render": function (data) { return data.lastSeen ? moment(data.lastSeen).format("MM/DD/YYYY") : ""; } },
+							{
+								"data": null, "orderable": false, "className": 'text-center',
+								"render": function (data) {
+									if (canUpload())
+										return '<button type="button" class="btn btn-sm btn-primary" title="Edit this POA&M item" onclick="editPoamItem(\'' + data.internalIdString + '\');"><i class="fa fa-pencil"></i></button>';
+									return '';
+								}
+							}
+						],
+						"columnDefs": [
+							{ "width": "30%", "targets": 0 },
+							{ "width": "10%", "targets": 1 },
+							{ "width": "12%", "targets": 2 },
+							{ "width": "8%", "targets": 3 },
+							{ "width": "14%", "targets": 4 },
+							{ "width": "8%", "targets": 5 },
+							{ "width": "8%", "targets": 6 },
+							{ "width": "8%", "targets": 7 },
+							{ "width": "5%", "targets": 8 }
+						],
+						order: [[3, 'asc']]
+					});
+				}
+				else {
+					alert('You are not logged in. Please check your setup with Keycloak.');
+				}
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm as well as Redirect URI and Web Origins information. (i.e. are you missing an \'*\' somewhere?');
+			});
+		});
+	</script>
+	<!-- END Java Script for this page -->
+
+</body>
+
+</html>
