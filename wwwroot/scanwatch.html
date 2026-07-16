@@ -1,0 +1,422 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>OpenRMF OSS Scan Watch</title>
+	<meta name="description" content="OpenRMF automated scan ingest from a network share">
+	<meta name="referrer" content="origin">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="/assets/images/favicon.ico">
+
+	<!-- Bootstrap CSS -->
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Font Awesome CSS -->
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Custom CSS -->
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+
+	<!-- BEGIN CSS for this page -->
+	<link rel="stylesheet" type="text/css" href="/assets/css/dataTables.bootstrap4.min.css" />
+	<!-- END CSS for this page -->
+
+</head>
+
+<body class="adminbody">
+
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+
+		<!-- top bar navigation -->
+		<div id="includeNavBarLink"></div>
+		<!-- End Navigation -->
+
+		<!-- Left Sidebar -->
+		<div id="includeSidebarLink"></div>
+		<!-- End Sidebar -->
+
+		<div class="content-page">
+			<!-- Start content -->
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Scan Watch</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">Scan Watch</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+					<!-- end row -->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-7 col-xl-7">
+							<div class="card mb-3">
+								<div class="card-header">
+									<h3><i class="fa fa-folder-open"></i> Watched Share Configuration</h3>
+								</div>
+								<div class="card-body">
+									<form>
+										<div class="form-row">
+											<div class="form-group col-md-4">
+												<div class="custom-control custom-checkbox" style="margin-top: 2.2rem;">
+													<input type="checkbox" class="custom-control-input" id="frmEnabled">
+													<label class="custom-control-label" for="frmEnabled">Enabled</label>
+												</div>
+											</div>
+											<div class="form-group col-md-8">
+												<label for="frmMode">Source Type</label>
+												<select class="form-control" id="frmMode" onchange="toggleModeFields();">
+													<option value="smb">SMB / CIFS network share</option>
+													<option value="local">Local folder mounted into the container</option>
+												</select>
+											</div>
+										</div>
+										<div id="grpSmbFields">
+											<div class="form-row">
+												<div class="form-group col-md-6">
+													<label for="frmSmbHost">File Server (host name or IP)</label>
+													<input type="text" class="form-control" id="frmSmbHost" placeholder="fileserver.example.mil">
+												</div>
+												<div class="form-group col-md-3">
+													<label for="frmSmbShare">Share Name</label>
+													<input type="text" class="form-control" id="frmSmbShare" placeholder="scc-drops">
+												</div>
+												<div class="form-group col-md-3">
+													<label for="frmSmbPath">Subfolder (optional)</label>
+													<input type="text" class="form-control" id="frmSmbPath" placeholder="prod">
+												</div>
+											</div>
+											<div class="form-row">
+												<div class="form-group col-md-4">
+													<label for="frmSmbDomain">Domain (optional)</label>
+													<input type="text" class="form-control" id="frmSmbDomain">
+												</div>
+												<div class="form-group col-md-4">
+													<label for="frmSmbUsername">Username</label>
+													<input type="text" class="form-control" id="frmSmbUsername" autocomplete="off">
+													<small class="form-text text-muted">Use a read-only share account</small>
+												</div>
+												<div class="form-group col-md-4">
+													<label for="frmSmbPassword">Password</label>
+													<input type="password" class="form-control" id="frmSmbPassword" autocomplete="new-password">
+													<small class="form-text text-muted" id="passwordHint">Leave blank to keep the stored password</small>
+												</div>
+											</div>
+										</div>
+										<div id="grpLocalFields" style="display: none;">
+											<div class="form-group">
+												<label for="frmLocalRoot">Local Folder Path (inside the container)</label>
+												<input type="text" class="form-control" id="frmLocalRoot" placeholder="/scans">
+											</div>
+										</div>
+										<div class="form-row">
+											<div class="form-group col-md-4">
+												<label for="frmPollSeconds">Poll Every (seconds)</label>
+												<input type="number" class="form-control" id="frmPollSeconds" min="30" value="300">
+											</div>
+											<div class="form-group col-md-4">
+												<label for="frmStableSeconds">File Settle Time (seconds)</label>
+												<input type="number" class="form-control" id="frmStableSeconds" min="0" value="60">
+												<small class="form-text text-muted">Skip files newer than this (still copying)</small>
+											</div>
+											<div class="form-group col-md-4">
+												<div class="custom-control custom-checkbox" style="margin-top: 2.2rem;">
+													<input type="checkbox" class="custom-control-input" id="frmAutoCreate">
+													<label class="custom-control-label" for="frmAutoCreate">Auto-create missing system packages</label>
+												</div>
+											</div>
+										</div>
+										<div class="form-group">
+											<button type="button" class="btn btn-sm btn-primary" onclick="saveConfig();">
+												<i class="fa fa-save"></i> Save Configuration</button>
+											<button type="button" class="btn btn-sm btn-info" onclick="testConnection();">
+												<i class="fa fa-plug"></i> Test Connection</button>
+											<span id="lastUpdated" class="text-muted" style="margin-left: 10px;"></span>
+										</div>
+									</form>
+									<div class="alert alert-secondary" style="margin-bottom: 0;">
+										Drop layout: one subfolder per system package (folder name = package title).
+										SCC XCCDF results (<code>.xml</code>) and <code>.ckl</code> files import as checklists;
+										<code>.nessus</code> files import as patch scans. Files are read-only to OpenRMF and
+										each unique file content is ingested exactly once.
+									</div>
+								</div><!-- end card body -->
+							</div><!-- end card-->
+						</div>
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-5 col-xl-5">
+							<div class="card mb-3">
+								<div class="card-header">
+									<h3><i class="fa fa-plug"></i> Connection Test</h3>
+								</div>
+								<div class="card-body">
+									<div id="testResult" class="text-muted">Use Test Connection to verify the share settings
+										and preview the system folders the watcher would use.</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header">
+									<h3><i class="fa fa-history"></i> Recent Ingest Activity
+										<button type="button" class="btn btn-sm btn-secondary float-right" onclick="getIngestLog();">
+											<i class="fa fa-refresh"></i> Refresh</button>
+									</h3>
+								</div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table id="tblIngestLog" class="table table-striped table-bordered" style="width:100%">
+											<thead>
+												<tr>
+													<th>File</th>
+													<th>Type</th>
+													<th>System Folder</th>
+													<th>Status</th>
+													<th>Detail</th>
+													<th>Attempts</th>
+													<th>Last Attempt</th>
+												</tr>
+											</thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div><!-- end card body -->
+							</div><!-- end card-->
+						</div>
+					</div><!-- end row-->
+
+				</div>
+				<!-- END container-fluid -->
+
+			</div>
+			<!-- END content -->
+
+		</div>
+		<!-- END content-page -->
+
+		<footer class="footer">
+			<div id="includeFooterLink"></div>
+		</footer>
+		<div id="includeAutoLogin"></div>
+
+	</div>
+	<!-- END main -->
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/moment.min.js"></script>
+
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+
+	<!-- App js -->
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/js/jquery.dataTables.min.js"></script>
+	<script src="/assets/js/dataTables.bootstrap4.min.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<!-- BEGIN Java Script for this page -->
+	<script>
+		var tableIngestLog = null;
+
+		function toggleModeFields() {
+			if ($("#frmMode").val() == "smb") {
+				$("#grpSmbFields").show();
+				$("#grpLocalFields").hide();
+			} else {
+				$("#grpSmbFields").hide();
+				$("#grpLocalFields").show();
+			}
+		}
+
+		function configFromForm() {
+			return {
+				enabled: $("#frmEnabled").is(":checked"),
+				mode: $("#frmMode").val(),
+				smbHost: $("#frmSmbHost").val().trim(),
+				smbShare: $("#frmSmbShare").val().trim(),
+				smbPath: $("#frmSmbPath").val().trim(),
+				smbDomain: $("#frmSmbDomain").val().trim(),
+				smbUsername: $("#frmSmbUsername").val().trim(),
+				smbPassword: $("#frmSmbPassword").val(), // blank = keep stored
+				localRoot: $("#frmLocalRoot").val().trim(),
+				pollSeconds: parseInt($("#frmPollSeconds").val()) || 300,
+				stableSeconds: parseInt($("#frmStableSeconds").val()) || 0,
+				autoCreateSystems: $("#frmAutoCreate").is(":checked")
+			};
+		}
+
+		function fillForm(cfg) {
+			$("#frmEnabled").prop("checked", cfg.enabled);
+			$("#frmMode").val(cfg.mode || "smb");
+			$("#frmSmbHost").val(cfg.smbHost || "");
+			$("#frmSmbShare").val(cfg.smbShare || "");
+			$("#frmSmbPath").val(cfg.smbPath || "");
+			$("#frmSmbDomain").val(cfg.smbDomain || "");
+			$("#frmSmbUsername").val(cfg.smbUsername || "");
+			$("#frmSmbPassword").val("");
+			$("#passwordHint").text(cfg.hasPassword
+				? "A password is stored. Leave blank to keep it."
+				: "No password stored yet.");
+			$("#frmLocalRoot").val(cfg.localRoot || "/scans");
+			$("#frmPollSeconds").val(cfg.pollSeconds || 300);
+			$("#frmStableSeconds").val(cfg.stableSeconds >= 0 ? cfg.stableSeconds : 60);
+			$("#frmAutoCreate").prop("checked", cfg.autoCreateSystems);
+			if (cfg.updatedOn)
+				$("#lastUpdated").text("Last saved " + moment(cfg.updatedOn).format("MM/DD/YYYY HH:mm") +
+					(cfg.updatedBy ? " by " + cfg.updatedBy : ""));
+			toggleModeFields();
+		}
+
+		async function getConfig() {
+			let response = await fetch(scanwatchAPI + "config", { headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (response.ok) {
+				fillForm(await response.json());
+			} else {
+				swal("There was a problem loading the Scan Watch configuration.", "Click OK to continue!", "error");
+			}
+		}
+
+		async function saveConfig() {
+			var cfg = configFromForm();
+			if (cfg.enabled && cfg.mode == "smb" && (!cfg.smbHost || !cfg.smbShare)) {
+				swal("The file server and share name are required to enable SMB watching.", "Click OK to continue!", "error");
+				return;
+			}
+			$.blockUI({ message: "Saving the configuration...please wait", css: { padding: '15px' } });
+			let response = await fetch(scanwatchAPI + "config", {
+				method: 'PUT',
+				headers: {
+					'Authorization': 'Bearer ' + keycloak.token,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(cfg)
+			});
+			$.unblockUI();
+			if (response.ok) {
+				fillForm(await response.json());
+				swal("The Scan Watch configuration was saved. Changes take effect within a few seconds.", "Click OK to continue!", "success");
+			} else {
+				var msg = await response.text();
+				swal("There was a problem saving the configuration. " + msg, "Click OK to continue!", "error");
+			}
+		}
+
+		async function testConnection() {
+			$("#testResult").html('<i class="fa fa-spinner fa-spin"></i> Testing the connection...');
+			let response = await fetch(scanwatchAPI + "config/test", {
+				method: 'POST',
+				headers: {
+					'Authorization': 'Bearer ' + keycloak.token,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(configFromForm())
+			});
+			if (!response.ok) {
+				$("#testResult").html('<span class="text-danger">The test request failed. Are you an Administrator?</span>');
+				return;
+			}
+			var result = await response.json();
+			if (result.success) {
+				var html = '<span class="text-success"><i class="fa fa-check"></i> Connected.</span> System folders found:';
+				if (result.folders && result.folders.length > 0) {
+					html += '<ul>';
+					result.folders.forEach(function (f) { html += '<li>' + htmlEscape(f) + '</li>'; });
+					html += '</ul>';
+				} else {
+					html += ' <em>none yet</em>';
+				}
+				$("#testResult").html(html);
+			} else {
+				$("#testResult").html('<span class="text-danger"><i class="fa fa-times"></i> ' + htmlEscape(result.error) + '</span>');
+			}
+		}
+
+		async function getIngestLog() {
+			let response = await fetch(scanwatchAPI + "log?limit=100", { headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (response.ok) {
+				var data = await response.json();
+				tableIngestLog.clear();
+				tableIngestLog.rows.add(data).draw();
+			}
+		}
+
+		function statusBadge(status) {
+			if (status == "success")
+				return '<span class="badge badge-success">success</span>';
+			if (status == "failed")
+				return '<span class="badge badge-danger">failed</span>';
+			return '<span class="badge badge-warning">' + htmlEscape(status || "") + '</span>';
+		}
+
+		$(document).ready(function () {
+			// authentication first
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					// setup the User Interface
+					setupOpenRMFUI();
+					if (!isAdministrator()) {
+						swal("Only Administrators can configure Scan Watch.", "Click OK to continue!", "error")
+							.then(function () { window.location.href = "/index.html"; });
+						return;
+					}
+					tableIngestLog = $('#tblIngestLog').DataTable({
+						"responsive": false,
+						"searching": true,
+						"pageLength": 25,
+						"autoWidth": false,
+						"deferRender": true,
+						"data": [],
+						"columns": [
+							{ "data": null, "render": function (data) { return htmlEscape(data.path || ""); } },
+							{ "data": null, "render": function (data) { return htmlEscape(data.scanType || ""); } },
+							{ "data": null, "render": function (data) { return htmlEscape(data.systemFolder || ""); } },
+							{ "data": null, "render": function (data) { return statusBadge(data.status); } },
+							{ "data": null, "render": function (data) { return htmlEscape(data.detail || ""); } },
+							{ "data": null, "render": function (data) { return data.attempts; } },
+							{ "data": null, "render": function (data) { return data.lastAttempt ? moment(data.lastAttempt).format("MM/DD/YYYY HH:mm:ss") : ""; } }
+						],
+						order: [[6, 'desc']]
+					});
+					getConfig();
+					getIngestLog();
+				}
+				else {
+					alert('You are not logged in. Please check your setup with Keycloak.');
+				}
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm as well as Redirect URI and Web Origins information. (i.e. are you missing an \'*\' somewhere?');
+			});
+		});
+	</script>
+	<!-- END Java Script for this page -->
+
+</body>
+
+</html>

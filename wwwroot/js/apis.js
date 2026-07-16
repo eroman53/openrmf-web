@@ -17,6 +17,7 @@
     var reportAPI = root + '/api/report/';
     var poamAPI = root + '/api/poam/';
     var scanhistoryAPI = root + '/api/scanhistory/';
+    var scanwatchAPI = root + '/api/scanwatch/';
 
     // menu link to load Keycloak Groups and Users
     var urlKeycloakMenuLink = document.location.protocol + '//' + document.location.host + "/auth/admin/master/console/#/openrmf/users";
