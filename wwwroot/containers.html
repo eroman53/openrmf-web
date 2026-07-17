@@ -88,10 +88,17 @@
 											</div>
 										</div>
 										<div class="form-group">
-											<label for="frmTarget">Folder to scan (inside the scanner container)</label>
-											<input type="text" class="form-control" id="frmTarget" value="/target">
-											<small class="form-text text-muted">The host folder is mounted at <code>/target</code>
-												via <code>TRIVYSCAN_TARGET</code> in the stack config; scan the whole mount or a subfolder.</small>
+											<label for="frmTarget">Folder to scan</label>
+											<div class="input-group">
+												<input type="text" class="form-control" id="frmTarget" value="/target" readonly>
+												<div class="input-group-append">
+													<button class="btn btn-secondary" type="button" id="btnBrowse" style="display:none;"
+														onclick="openBrowser();"><i class="fa fa-folder-open"></i> Browse</button>
+												</div>
+											</div>
+											<small class="form-text text-muted">The share (NFS or host folder, set by
+												<code>TRIVYSCAN_TARGET</code> in the stack config) is mounted at <code>/target</code>;
+												browse it to pick the folder to scan.</small>
 										</div>
 										<div class="form-group">
 											<label for="frmSystem">Attach results to System Package</label>
@@ -174,6 +181,32 @@
 	</div>
 	<!-- END main -->
 
+	<!-- Folder browser modal -->
+	<div class="modal fade" id="browseModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Choose Folder to Scan</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-2">
+						<button type="button" class="btn btn-sm btn-secondary" id="btnBrowseUp" onclick="browseUp();">
+							<i class="fa fa-level-up"></i> Up</button>
+						<span class="mono ml-2" id="browsePath" style="font-family: monospace;"></span>
+					</div>
+					<div class="list-group" id="browseList" style="max-height: 300px; overflow-y: auto;"></div>
+					<small class="text-muted" id="browseInfo"></small>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary" onclick="selectBrowsed();">
+						<i class="fa fa-check"></i> Use This Folder</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<script src="/assets/js/modernizr.min.js"></script>
 	<script src="/assets/js/jquery.min.js"></script>
 	<script src="/assets/js/moment.min.js"></script>
@@ -202,6 +235,41 @@
 
 		function hdr() { return { 'Authorization': 'Bearer ' + keycloak.token }; }
 		function sevName(s) { return { 4: "Critical", 3: "High", 2: "Medium", 1: "Low" }[s] || s; }
+
+		var browseState = { path: "/target", parent: null };
+
+		function openBrowser() { browseTo($("#frmTarget").val() || "/target", true); }
+
+		async function browseTo(path, showModal) {
+			let r = await fetch(trivyscanAPI + "browse?path=" + encodeURIComponent(path), { headers: hdr() });
+			if (!r.ok) {
+				// fall back to the root if the saved path is gone (share changed)
+				if (path != "/target") { browseTo("/target", showModal); return; }
+				swal("Could not browse the scan share. Is it mounted?", "Click OK to continue!", "error");
+				return;
+			}
+			var data = await r.json();
+			browseState = data;
+			$("#browsePath").text(data.path);
+			$("#btnBrowseUp").prop("disabled", !data.parent);
+			var list = $("#browseList"); list.empty();
+			if (data.dirs.length == 0)
+				list.append('<div class="list-group-item text-muted">no subfolders</div>');
+			data.dirs.forEach(function (d) {
+				list.append('<a href="#" class="list-group-item list-group-item-action" onclick="browseTo(\''
+					+ d.path.replace(/'/g, "\\'") + '\', false); return false;"><i class="fa fa-folder"></i> '
+					+ htmlEscape(d.name) + '</a>');
+			});
+			$("#browseInfo").text(data.fileCount + " file(s) directly in this folder");
+			if (showModal) $("#browseModal").modal("show");
+		}
+
+		function browseUp() { if (browseState.parent) browseTo(browseState.parent, false); }
+
+		function selectBrowsed() {
+			$("#frmTarget").val(browseState.path);
+			$("#browseModal").modal("hide");
+		}
 
 		async function fillSystems() {
 			let r = await fetch(readAPI + "systems", { headers: hdr() });
@@ -304,7 +372,7 @@
 					// setup the User Interface
 					setupOpenRMFUI();
 					if (isAdministrator()) $("#btnSaveCfg").show();
-					if (canUpload()) $("#btnScanNow").show();
+					if (canUpload()) { $("#btnScanNow").show(); $("#btnBrowse").show(); }
 
 					tableTrend = $('#tblTrend').DataTable({
 						"responsive": false, "searching": false, "pageLength": 10, "autoWidth": false,
