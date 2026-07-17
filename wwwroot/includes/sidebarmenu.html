@@ -19,6 +19,10 @@
                             class="fa fa-fw fa-tasks"></i><span> POA&amp;M </span> </a>
                 </li>
                 <li class="submenu">
+                    <a id="mnuConmon" href="/conmon.html" title="Continuous monitoring posture (SP 800-137)"><i
+                            class="fa fa-fw fa-heartbeat"></i><span> ConMon </span> </a>
+                </li>
+                <li class="submenu">
                     <a id="mnuTemplates" href="/templates.html" title="View your OpenRMF Template Checklists"><i
                             class="fa fa-fw fa-list"></i><span> Templates </span> </a>
                 </li>
@@ -73,6 +77,8 @@
         $("#mnuCompliance").addClass("active");
     } else if ( document.URL.includes("/poam.html") ) {
         $("#mnuPoam").addClass("active");
+    } else if ( document.URL.includes("/conmon.html") ) {
+        $("#mnuConmon").addClass("active");
     } else if ( document.URL.includes("/templates.html") || document.URL.includes("/single-template.html") ) {
         $("#mnuTemplates").addClass("active");
     } else if ( document.URL.includes("/upload.html") ) {

@@ -1,0 +1,353 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>OpenRMF OSS Continuous Monitoring</title>
+	<meta name="description" content="OpenRMF continuous monitoring posture (NIST SP 800-137)">
+	<meta name="referrer" content="origin">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="/assets/images/favicon.ico">
+
+	<!-- Bootstrap CSS -->
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Font Awesome CSS -->
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Custom CSS -->
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+
+	<!-- BEGIN CSS for this page -->
+	<link rel="stylesheet" type="text/css" href="/assets/css/dataTables.bootstrap4.min.css" />
+	<!-- END CSS for this page -->
+
+</head>
+
+<body class="adminbody">
+
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+
+		<!-- top bar navigation -->
+		<div id="includeNavBarLink"></div>
+		<!-- End Navigation -->
+
+		<!-- Left Sidebar -->
+		<div id="includeSidebarLink"></div>
+		<!-- End Sidebar -->
+
+		<div class="content-page">
+			<!-- Start content -->
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Continuous Monitoring</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">ConMon</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+					<!-- end row -->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header">
+									<h3><i class="fa fa-heartbeat"></i> System Posture (SP 800-137)
+										<button type="button" class="btn btn-sm btn-secondary float-right" onclick="getPosture();">
+											<i class="fa fa-refresh"></i> Refresh</button>
+									</h3>
+								</div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table id="tblPosture" class="table table-striped table-bordered" style="width:100%">
+											<thead>
+												<tr>
+													<th>System Package</th>
+													<th>Scan Freshness</th>
+													<th>Open Crit / High</th>
+													<th>Overdue Findings</th>
+													<th>POA&amp;M Open / Overdue</th>
+													<th>Coverage Gaps</th>
+													<th>Outdated STIGs</th>
+													<th></th>
+												</tr>
+											</thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div><!-- end card body -->
+							</div><!-- end card-->
+						</div>
+					</div><!-- end row-->
+
+					<div class="row" id="detailRow" style="display: none;">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-6 col-xl-6">
+							<div class="card mb-3">
+								<div class="card-header"><h3 id="coverageTitle"><i class="fa fa-crosshairs"></i> Asset Coverage</h3></div>
+								<div class="card-body" id="coverageBody"></div>
+							</div>
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-clock-o"></i> Open Finding Aging</h3></div>
+								<div class="card-body" id="agingBody"></div>
+							</div>
+						</div>
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-6 col-xl-6">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-certificate"></i> STIG Benchmark Currency</h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table class="table table-sm table-bordered" id="tblCurrency">
+											<thead><tr><th>Host</th><th>STIG</th><th>Checklist Rel.</th><th>Latest Rel.</th><th>State</th></tr></thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+							<div class="card mb-3" id="policyCard" style="display: none;">
+								<div class="card-header"><h3><i class="fa fa-sliders"></i> Cadence Policy <small id="policyScope"></small></h3></div>
+								<div class="card-body">
+									<form>
+										<div class="form-row">
+											<div class="form-group col-md-6">
+												<label for="frmNessusDays">Patch Scan Every (days)</label>
+												<input type="number" class="form-control" id="frmNessusDays" min="1">
+											</div>
+											<div class="form-group col-md-6">
+												<label for="frmChecklistDays">Checklist Review Every (days)</label>
+												<input type="number" class="form-control" id="frmChecklistDays" min="1">
+											</div>
+										</div>
+										<div class="form-row">
+											<div class="form-group col-md-4">
+												<label for="frmCat1Days">CAT I Max Age (days)</label>
+												<input type="number" class="form-control" id="frmCat1Days" min="1">
+											</div>
+											<div class="form-group col-md-4">
+												<label for="frmCat2Days">CAT II Max Age (days)</label>
+												<input type="number" class="form-control" id="frmCat2Days" min="1">
+											</div>
+											<div class="form-group col-md-4">
+												<label for="frmCat3Days">CAT III Max Age (days)</label>
+												<input type="number" class="form-control" id="frmCat3Days" min="1">
+											</div>
+										</div>
+										<button type="button" class="btn btn-sm btn-primary" onclick="savePolicy();">
+											<i class="fa fa-save"></i> Save Policy</button>
+										<span class="text-muted" style="margin-left:8px;">Org default applies where no system policy is set.</span>
+									</form>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+				</div>
+				<!-- END container-fluid -->
+
+			</div>
+			<!-- END content -->
+
+		</div>
+		<!-- END content-page -->
+
+		<footer class="footer">
+			<div id="includeFooterLink"></div>
+		</footer>
+		<div id="includeAutoLogin"></div>
+
+	</div>
+	<!-- END main -->
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/moment.min.js"></script>
+
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+
+	<!-- App js -->
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/js/jquery.dataTables.min.js"></script>
+	<script src="/assets/js/dataTables.bootstrap4.min.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<!-- BEGIN Java Script for this page -->
+	<script>
+		var tablePosture = null;
+		var currentSystemId = null;
+
+		function freshBadge(scan) {
+			var cls = { green: "badge-success", amber: "badge-warning", red: "badge-danger", missing: "badge-secondary" }[scan.status] || "badge-secondary";
+			var txt = scan.status == "missing" ? "no scan" : scan.ageDays + "d (exp " + scan.expectedDays + "d)";
+			return '<span class="badge ' + cls + '">' + txt + '</span>';
+		}
+
+		async function getPosture() {
+			$.blockUI({ message: "Computing posture...please wait", css: { padding: '15px' } });
+			let response = await fetch(conmonAPI + "conmon/posture", { headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			$.unblockUI();
+			if (response.ok) {
+				var data = await response.json();
+				tablePosture.clear();
+				tablePosture.rows.add(data).draw();
+			} else {
+				swal("There was a problem loading the posture rollup.", "Click OK to continue!", "error");
+			}
+		}
+
+		async function showDetail(systemGroupId) {
+			currentSystemId = systemGroupId;
+			let response = await fetch(conmonAPI + "conmon/system/" + encodeURIComponent(systemGroupId) + "/posture",
+				{ headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (!response.ok) {
+				swal("There was a problem loading the system posture.", "Click OK to continue!", "error");
+				return;
+			}
+			var p = await response.json();
+			$("#detailRow").show();
+			$("#coverageTitle").html('<i class="fa fa-crosshairs"></i> Asset Coverage — ' + htmlEscape(p.title));
+
+			var cov = '<p>' + p.coverage.scannedHosts + ' host(s) in scans · ' + p.coverage.checklistHosts + ' host(s) with checklists</p>';
+			cov += '<b>Scanned, but no STIG checklist:</b>';
+			cov += listOrNone(p.coverage.scannedNoChecklist);
+			cov += '<b>Checklist host not seen in scans:</b>';
+			cov += listOrNone(p.coverage.checklistNotScanned);
+			$("#coverageBody").html(cov);
+
+			var a = p.findings.aging, o = p.findings.overdue;
+			var ag = '<p>' + p.findings.open + ' open finding(s): '
+				+ p.findings.critical + ' critical · ' + p.findings.high + ' high · '
+				+ p.findings.medium + ' medium · ' + p.findings.low + ' low</p>';
+			ag += '<p>Age buckets: 0-30d: <b>' + a.d0_30 + '</b> · 31-60d: <b>' + a.d31_60 + '</b> · 61-90d: <b>' + a.d61_90 + '</b> · 90d+: <b>' + a.d90plus + '</b></p>';
+			ag += '<p>Overdue vs policy: CAT I: <b>' + o.cat1 + '</b> · CAT II: <b>' + o.cat2 + '</b> · CAT III: <b>' + o.cat3 + '</b></p>';
+			ag += '<p>POA&M: ' + p.poam.open + ' open · ' + p.poam.overdueScheduled + ' past scheduled completion · '
+				+ p.poam.pendingVerification + ' pending verification</p>';
+			$("#agingBody").html(ag);
+
+			var tb = $("#tblCurrency tbody"); tb.empty();
+			var rows = p.benchmarkCurrency.detail || [];
+			if (rows.length == 0) tb.append('<tr><td colspan="5" class="text-muted">No checklists on this system.</td></tr>');
+			rows.forEach(function (c) {
+				var cls = { current: "badge-success", outdated: "badge-danger", unknown: "badge-secondary" }[c.state];
+				tb.append('<tr><td>' + htmlEscape(c.hostName || "") + '</td><td>' + htmlEscape(c.stigType || "") + '</td><td>'
+					+ htmlEscape(c.checklistRelease || "") + '</td><td>' + htmlEscape(c.latestRelease || "—") + '</td><td><span class="badge '
+					+ cls + '">' + c.state + '</span></td></tr>');
+			});
+
+			if (isAdministrator()) {
+				$("#policyCard").show();
+				$("#policyScope").text("for " + p.title);
+				loadPolicy(systemGroupId);
+			}
+			document.getElementById("detailRow").scrollIntoView({ behavior: "smooth" });
+		}
+
+		function listOrNone(hosts) {
+			if (!hosts || hosts.length == 0) return '<p class="text-success"><i class="fa fa-check"></i> none</p>';
+			var h = '<ul>';
+			hosts.forEach(function (x) { h += '<li>' + htmlEscape(x) + '</li>'; });
+			return h + '</ul>';
+		}
+
+		async function loadPolicy(systemGroupId) {
+			let response = await fetch(conmonAPI + "conmon/policy/" + encodeURIComponent(systemGroupId),
+				{ headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (!response.ok) return;
+			var pol = await response.json();
+			$("#frmNessusDays").val(pol.nessusDays);
+			$("#frmChecklistDays").val(pol.checklistDays);
+			$("#frmCat1Days").val(pol.cat1MaxAgeDays);
+			$("#frmCat2Days").val(pol.cat2MaxAgeDays);
+			$("#frmCat3Days").val(pol.cat3MaxAgeDays);
+		}
+
+		async function savePolicy() {
+			if (!currentSystemId) return;
+			var body = {
+				nessusDays: parseInt($("#frmNessusDays").val()) || 7,
+				checklistDays: parseInt($("#frmChecklistDays").val()) || 90,
+				cat1MaxAgeDays: parseInt($("#frmCat1Days").val()) || 30,
+				cat2MaxAgeDays: parseInt($("#frmCat2Days").val()) || 90,
+				cat3MaxAgeDays: parseInt($("#frmCat3Days").val()) || 180
+			};
+			let response = await fetch(conmonAPI + "conmon/policy/" + encodeURIComponent(currentSystemId), {
+				method: 'PUT',
+				headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			if (response.ok) {
+				swal("The cadence policy was saved.", "Click OK to continue!", "success");
+				getPosture();
+				showDetail(currentSystemId);
+			} else {
+				swal("There was a problem saving the policy.", "Click OK to continue!", "error");
+			}
+		}
+
+		$(document).ready(function () {
+			// authentication first
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					// setup the User Interface
+					setupOpenRMFUI();
+					tablePosture = $('#tblPosture').DataTable({
+						"responsive": false,
+						"searching": true,
+						"pageLength": 25,
+						"autoWidth": false,
+						"deferRender": true,
+						"data": [],
+						"columns": [
+							{ "data": null, "render": function (d) { return htmlEscape(d.title || d.systemGroupId); } },
+							{ "data": null, "render": function (d) { return freshBadge(d.scan); } },
+							{ "data": null, "render": function (d) { return d.findings.critical + ' / ' + d.findings.high; } },
+							{ "data": null, "render": function (d) { var o = d.findings.overdue; return (o.cat1 + o.cat2 + o.cat3) + ' (I:' + o.cat1 + ' II:' + o.cat2 + ' III:' + o.cat3 + ')'; } },
+							{ "data": null, "render": function (d) { return d.poam.open + ' / ' + d.poam.overdueScheduled; } },
+							{ "data": null, "render": function (d) { var c = d.coverage; return (c.scannedNoChecklist + c.checklistNotScanned); } },
+							{ "data": null, "render": function (d) { var b = d.benchmarkCurrency; return b.outdated + (b.unknown > 0 ? ' (+' + b.unknown + ' unknown)' : ''); } },
+							{
+								"data": null, "orderable": false, "className": 'text-center',
+								"render": function (d) {
+									return '<button type="button" class="btn btn-sm btn-primary" title="View detail" onclick="showDetail(\'' + d.systemGroupId + '\');"><i class="fa fa-search"></i></button>';
+								}
+							}
+						]
+					});
+					getPosture();
+				}
+				else {
+					alert('You are not logged in. Please check your setup with Keycloak.');
+				}
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm as well as Redirect URI and Web Origins information. (i.e. are you missing an \'*\' somewhere?');
+			});
+		});
+	</script>
+	<!-- END Java Script for this page -->
+
+</body>
+
+</html>
