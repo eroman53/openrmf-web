@@ -1,4 +1,9 @@
 FROM docker.io/nginxinc/nginx-unprivileged:1.29.8-alpine3.23
+# patch OS packages in the pinned base image (trivy flags curl/openssl/expat/
+# libxml2 HIGHs in the base as shipped); back to the unprivileged user after
+USER root
+RUN apk update && apk upgrade --no-cache && rm -rf /var/cache/apk/*
+USER 101
 # Fix for broken build on Docker in GH is to put RUN true between multiple COPY statements :(
 RUN true
 COPY ./wwwroot/*.html /usr/share/nginx/html/
