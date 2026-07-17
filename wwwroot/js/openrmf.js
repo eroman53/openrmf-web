@@ -2,11 +2,11 @@ function setupOpenRMFUI(disableTimers) {
 	$("#main").show();
     if (typeof keycloak !== 'undefined') {
 		setupTimers();
-		$("#includeAutoLogin").load("/includes/modalLogout.html"); 
+		$("#includeAutoLogin").load("/includes/modalLogout.html?v=stooge2"); 
 	}
-	$("#includeNavBarLink").load("/includes/navbar.html"); 
-	$("#includeSidebarLink").load("/includes/sidebarmenu.html"); 
-	$("#includeFooterLink").load("/includes/footertext.html"); 
+	$("#includeNavBarLink").load("/includes/navbar.html?v=stooge2"); 
+	$("#includeSidebarLink").load("/includes/sidebarmenu.html?v=stooge2"); 
+	$("#includeFooterLink").load("/includes/footertext.html?v=stooge2"); 
     $.ajaxSetup({
         beforeSend: function(xhr) {
             xhr.setRequestHeader('Authorization', 'Bearer ' + keycloak.token);
