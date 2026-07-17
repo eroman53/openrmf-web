@@ -1,0 +1,503 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>STOOGE System Inventory</title>
+	<meta name="description" content="Asset inventory with OS classification and fleet findings">
+	<meta name="referrer" content="origin">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="/assets/images/favicon-32.png" type="image/png">
+
+	<!-- Bootstrap CSS -->
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Font Awesome CSS -->
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Custom CSS -->
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+
+	<!-- BEGIN CSS for this page -->
+	<link rel="stylesheet" type="text/css" href="/assets/css/dataTables.bootstrap4.min.css" />
+	<style>
+		.class-chip { cursor: pointer; margin: 0 6px 6px 0; padding: 6px 12px; }
+		.class-chip.active { outline: 2px solid #007bff; }
+	</style>
+	<!-- END CSS for this page -->
+
+</head>
+
+<body class="adminbody">
+
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+
+		<!-- top bar navigation -->
+		<div id="includeNavBarLink"></div>
+		<!-- End Navigation -->
+
+		<!-- Left Sidebar -->
+		<div id="includeSidebarLink"></div>
+		<!-- End Sidebar -->
+
+		<div class="content-page">
+			<!-- Start content -->
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">System Inventory</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">Inventory</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+					<!-- end row -->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-5 col-xl-5">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-filter"></i> System &amp; Asset Class</h3></div>
+								<div class="card-body">
+									<div class="form-group">
+										<label for="checklistSystemFilter">System Package</label>
+										<select class="form-control" id="checklistSystemFilter" onchange="loadSystem();">
+											<option value="">[ Choose a System Package ]</option>
+										</select>
+									</div>
+									<div id="classChips" class="mb-2"></div>
+									<button type="button" class="btn btn-sm btn-secondary" id="btnReconcile" style="display:none;"
+										onclick="reconcile();"><i class="fa fa-refresh"></i> Reconcile Inventory</button>
+								</div>
+							</div>
+						</div>
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-7 col-xl-7">
+							<div class="card mb-3" id="mappingCard" style="display:none;">
+								<div class="card-header"><h3><i class="fa fa-random"></i> OS Normalization Mappings
+									<button type="button" class="btn btn-sm btn-success float-right" onclick="newMapping();">
+										<i class="fa fa-plus"></i> Add Rule</button></h3></div>
+								<div class="card-body">
+									<div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+										<table class="table table-sm table-bordered" id="tblMappings">
+											<thead><tr><th>Pattern (contains)</th><th>OS Name</th><th>Family</th><th>Priority</th><th>Enabled</th><th></th></tr></thead>
+											<tbody></tbody>
+										</table>
+									</div>
+									<small class="text-muted">Raw scan OS strings and STIG titles are matched case-insensitively;
+										lowest priority number wins, longer patterns break ties. Changes apply on the next
+										upload or reconcile.</small>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header"><h3 id="assetsTitle"><i class="fa fa-server"></i> Assets</h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table id="tblAssets" class="table table-striped table-bordered" style="width:100%">
+											<thead>
+												<tr>
+													<th>Host</th>
+													<th>OS</th>
+													<th>Family</th>
+													<th>Asset Type</th>
+													<th>IP</th>
+													<th>STIG Checklists</th>
+													<th>Scan Seen</th>
+													<th>Checklist Seen</th>
+													<th></th>
+												</tr>
+											</thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+					<div class="row" id="fleetRow" style="display:none;">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header"><h3 id="fleetTitle"><i class="fa fa-bug"></i> Findings Across This Asset Class</h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table id="tblFleet" class="table table-striped table-bordered" style="width:100%">
+											<thead>
+												<tr>
+													<th>Plugin</th>
+													<th>Finding</th>
+													<th>Severity</th>
+													<th>Affected</th>
+													<th>Hosts</th>
+												</tr>
+											</thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+				</div>
+				<!-- END container-fluid -->
+
+			</div>
+			<!-- END content -->
+
+		</div>
+		<!-- END content-page -->
+
+		<footer class="footer">
+			<div id="includeFooterLink"></div>
+		</footer>
+		<div id="includeAutoLogin"></div>
+
+	</div>
+	<!-- END main -->
+
+	<!-- Asset edit modal -->
+	<div class="modal fade" id="assetEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="assetEditTitle">Classify Asset</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
+					<form>
+						<input type="hidden" id="frmAssetId" />
+						<div class="form-group">
+							<label for="frmAssetOsName">OS Name</label>
+							<input type="text" class="form-control" id="frmAssetOsName" placeholder="Windows 11, RHEL 8, ..." />
+						</div>
+						<div class="form-group">
+							<label for="frmAssetOsFamily">OS Family</label>
+							<select class="form-control" id="frmAssetOsFamily">
+								<option value="windows">windows</option>
+								<option value="linux">linux</option>
+								<option value="unix">unix</option>
+								<option value="network">network</option>
+								<option value="appliance">appliance</option>
+								<option value="other">other</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="frmAssetType">Asset Type</label>
+							<input type="text" class="form-control" id="frmAssetType" placeholder="Computing, Networking, ..." />
+						</div>
+						<div class="form-group">
+							<label for="frmAssetRole">Role</label>
+							<input type="text" class="form-control" id="frmAssetRole" placeholder="Member Server, Workstation, ..." />
+						</div>
+						<small class="text-muted">Manual classification is protected: automated reconciliation will never
+							overwrite these fields afterwards.</small>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary" onclick="saveAsset();">Save</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Mapping edit modal -->
+	<div class="modal fade" id="mappingEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">OS Mapping Rule</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
+					<form>
+						<input type="hidden" id="frmMapId" />
+						<div class="form-group">
+							<label for="frmMapPattern">Pattern (case-insensitive contains)</label>
+							<input type="text" class="form-control" id="frmMapPattern" placeholder="windows server 2025" />
+						</div>
+						<div class="form-row">
+							<div class="form-group col-md-6">
+								<label for="frmMapOsName">OS Name</label>
+								<input type="text" class="form-control" id="frmMapOsName" placeholder="Windows Server 2025" />
+							</div>
+							<div class="form-group col-md-3">
+								<label for="frmMapFamily">Family</label>
+								<select class="form-control" id="frmMapFamily">
+									<option value="windows">windows</option>
+									<option value="linux">linux</option>
+									<option value="unix">unix</option>
+									<option value="network">network</option>
+									<option value="appliance">appliance</option>
+									<option value="other">other</option>
+								</select>
+							</div>
+							<div class="form-group col-md-3">
+								<label for="frmMapPriority">Priority</label>
+								<input type="number" class="form-control" id="frmMapPriority" value="50" />
+							</div>
+						</div>
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="frmMapEnabled" checked>
+							<label class="custom-control-label" for="frmMapEnabled">Enabled</label>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary" onclick="saveMapping();">Save Rule</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/moment.min.js"></script>
+
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+
+	<!-- App js -->
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/js/jquery.dataTables.min.js"></script>
+	<script src="/assets/js/dataTables.bootstrap4.min.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<!-- BEGIN Java Script for this page -->
+	<script>
+		var tableAssets = null;
+		var tableFleet = null;
+		var assetsById = {};
+		var mappingsById = {};
+		var activeClass = "";
+
+		function hdr() { return { 'Authorization': 'Bearer ' + keycloak.token }; }
+		function sysId() { return $("#checklistSystemFilter").val(); }
+
+		async function loadSystem() {
+			activeClass = "";
+			$("#fleetRow").hide();
+			if (!sysId()) return;
+			$("#btnReconcile").show();
+			await loadClasses();
+			await loadAssets();
+		}
+
+		async function loadClasses() {
+			let r = await fetch(inventoryAPI + "inventory/system/" + encodeURIComponent(sysId()) + "/classes", { headers: hdr() });
+			var chips = $("#classChips"); chips.empty();
+			if (!r.ok) return;
+			var classes = await r.json();
+			chips.append('<span class="badge badge-secondary class-chip' + (activeClass == "" ? " active" : "") + '" onclick="pickClass(\'\')">All</span>');
+			classes.forEach(function (c) {
+				chips.append('<span class="badge badge-info class-chip' + (activeClass == c.osName ? " active" : "")
+					+ '" onclick="pickClass(\'' + htmlEscape(c.osName).replace(/'/g, "\\'") + '\')">'
+					+ htmlEscape(c.osName) + ' (' + c.count + ')</span>');
+			});
+		}
+
+		async function pickClass(osName) {
+			activeClass = osName;
+			await loadClasses();
+			await loadAssets();
+			if (osName) { await loadFleet(); } else { $("#fleetRow").hide(); }
+		}
+
+		async function loadAssets() {
+			var url = inventoryAPI + "inventory/system/" + encodeURIComponent(sysId()) + "/assets";
+			if (activeClass && activeClass != "Unclassified") url += "?osName=" + encodeURIComponent(activeClass);
+			let r = await fetch(url, { headers: hdr() });
+			if (!r.ok) { swal("There was a problem loading assets.", "Click OK to continue!", "error"); return; }
+			var data = await r.json();
+			if (activeClass == "Unclassified") data = data.filter(function (a) { return !a.osName; });
+			assetsById = {};
+			data.forEach(function (a) { assetsById[a.internalIdString] = a; });
+			tableAssets.clear(); tableAssets.rows.add(data).draw();
+			$("#assetsTitle").html('<i class="fa fa-server"></i> Assets' + (activeClass ? ' — ' + htmlEscape(activeClass) : ''));
+		}
+
+		async function loadFleet() {
+			let r = await fetch(inventoryAPI + "inventory/system/" + encodeURIComponent(sysId())
+				+ "/findings-by-class?osName=" + encodeURIComponent(activeClass), { headers: hdr() });
+			if (!r.ok) return;
+			var data = await r.json();
+			tableFleet.clear(); tableFleet.rows.add(data).draw();
+			$("#fleetTitle").html('<i class="fa fa-bug"></i> Findings Across ' + htmlEscape(activeClass) + ' Assets');
+			$("#fleetRow").show();
+		}
+
+		function editAsset(id) {
+			var a = assetsById[id]; if (!a) return;
+			$("#frmAssetId").val(id);
+			$("#assetEditTitle").text("Classify " + a.hostname);
+			$("#frmAssetOsName").val(a.osName || "");
+			$("#frmAssetOsFamily").val(a.osFamily || "other");
+			$("#frmAssetType").val(a.assetType || "");
+			$("#frmAssetRole").val(a.role || "");
+			$("#assetEditModal").modal("show");
+		}
+
+		async function saveAsset() {
+			var id = $("#frmAssetId").val();
+			let r = await fetch(inventoryAPI + "inventory/asset/" + id, {
+				method: 'PUT',
+				headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					osName: $("#frmAssetOsName").val(), osFamily: $("#frmAssetOsFamily").val(),
+					assetType: $("#frmAssetType").val(), role: $("#frmAssetRole").val()
+				})
+			});
+			$("#assetEditModal").modal("hide");
+			if (r.ok) { await loadClasses(); await loadAssets(); }
+			else swal("There was a problem saving the asset.", "Click OK to continue!", "error");
+		}
+
+		async function reconcile() {
+			$.blockUI({ message: "Reconciling the inventory...please wait", css: { padding: '15px' } });
+			let r = await fetch(inventoryAPI + "inventory/system/" + encodeURIComponent(sysId()) + "/reconcile",
+				{ method: 'POST', headers: hdr() });
+			$.unblockUI();
+			if (r.ok) { await loadClasses(); await loadAssets(); }
+			else swal("There was a problem reconciling.", "Click OK to continue!", "error");
+		}
+
+		async function loadMappings() {
+			let r = await fetch(inventoryAPI + "inventory/mappings", { headers: hdr() });
+			if (!r.ok) return;
+			var data = await r.json();
+			mappingsById = {};
+			var tb = $("#tblMappings tbody"); tb.empty();
+			data.forEach(function (m) {
+				mappingsById[m.internalIdString] = m;
+				tb.append('<tr><td>' + htmlEscape(m.pattern) + '</td><td>' + htmlEscape(m.osName) + '</td><td>'
+					+ htmlEscape(m.osFamily) + '</td><td>' + m.priority + '</td><td>' + (m.enabled ? "yes" : "no")
+					+ '</td><td class="text-center"><button class="btn btn-sm btn-primary" onclick="editMapping(\'' + m.internalIdString + '\')"><i class="fa fa-pencil"></i></button> '
+					+ '<button class="btn btn-sm btn-danger" onclick="deleteMapping(\'' + m.internalIdString + '\')"><i class="fa fa-trash"></i></button></td></tr>');
+			});
+		}
+
+		function newMapping() {
+			$("#frmMapId").val(""); $("#frmMapPattern").val(""); $("#frmMapOsName").val("");
+			$("#frmMapFamily").val("windows"); $("#frmMapPriority").val(50); $("#frmMapEnabled").prop("checked", true);
+			$("#mappingEditModal").modal("show");
+		}
+
+		function editMapping(id) {
+			var m = mappingsById[id]; if (!m) return;
+			$("#frmMapId").val(id); $("#frmMapPattern").val(m.pattern); $("#frmMapOsName").val(m.osName);
+			$("#frmMapFamily").val(m.osFamily); $("#frmMapPriority").val(m.priority);
+			$("#frmMapEnabled").prop("checked", m.enabled);
+			$("#mappingEditModal").modal("show");
+		}
+
+		async function saveMapping() {
+			var id = $("#frmMapId").val();
+			var body = {
+				pattern: $("#frmMapPattern").val(), osName: $("#frmMapOsName").val(),
+				osFamily: $("#frmMapFamily").val(), priority: parseInt($("#frmMapPriority").val()) || 50,
+				enabled: $("#frmMapEnabled").is(":checked")
+			};
+			if (id) { var m = mappingsById[id]; body.internalId = m.internalId; }
+			let r = await fetch(inventoryAPI + "inventory/mappings", {
+				method: 'POST',
+				headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			$("#mappingEditModal").modal("hide");
+			if (r.ok) loadMappings();
+			else swal("There was a problem saving the rule. Are you an Administrator?", "Click OK to continue!", "error");
+		}
+
+		async function deleteMapping(id) {
+			let r = await fetch(inventoryAPI + "inventory/mappings/" + id, { method: 'DELETE', headers: hdr() });
+			if (r.ok) loadMappings();
+			else swal("There was a problem deleting the rule. Are you an Administrator?", "Click OK to continue!", "error");
+		}
+
+		$(document).ready(function () {
+			// authentication first
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					// setup the User Interface
+					setupOpenRMFUI();
+					getChecklistSystemsForReportFilter();
+					if (isAdministrator()) { $("#mappingCard").show(); loadMappings(); }
+
+					tableAssets = $('#tblAssets').DataTable({
+						"responsive": false, "searching": true, "pageLength": 25, "autoWidth": false,
+						"deferRender": true, "data": [],
+						"columns": [
+							{ "data": null, "render": function (d) { return htmlEscape(d.hostname || ""); } },
+							{ "data": null, "render": function (d) { return d.osName ? htmlEscape(d.osName) : '<span class="text-muted">unclassified</span>'; } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.osFamily || ""); } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.assetType || ""); } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.ip || ""); } },
+							{ "data": null, "render": function (d) { return d.stigTypes && d.stigTypes.length ? htmlEscape(d.stigTypes.join(", ")) : ""; } },
+							{ "data": null, "render": function (d) { return d.scanLastSeen ? moment(d.scanLastSeen).format("MM/DD/YY") : ""; } },
+							{ "data": null, "render": function (d) { return d.checklistLastSeen ? moment(d.checklistLastSeen).format("MM/DD/YY") : ""; } },
+							{
+								"data": null, "orderable": false, "className": 'text-center',
+								"render": function (d) {
+									var badge = d.humanEdited ? ' <i class="fa fa-lock" title="Manually classified; automation will not change it"></i>' : '';
+									if (canUpload())
+										return '<button type="button" class="btn btn-sm btn-primary" title="Classify this asset" onclick="editAsset(\'' + d.internalIdString + '\');"><i class="fa fa-pencil"></i></button>' + badge;
+									return badge;
+								}
+							}
+						]
+					});
+
+					tableFleet = $('#tblFleet').DataTable({
+						"responsive": false, "searching": true, "pageLength": 25, "autoWidth": false,
+						"deferRender": true, "data": [],
+						"columns": [
+							{ "data": null, "render": function (d) { return htmlEscape(d.pluginId); } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.pluginName || ""); } },
+							{ "data": null, "render": function (d) { var names = { 4: "Critical", 3: "High", 2: "Medium", 1: "Low" }; return names[d.severity] || d.severity; } },
+							{ "data": null, "render": function (d) { return d.affected + ' of ' + d.totalClassAssets; } },
+							{ "data": null, "render": function (d) { return htmlEscape((d.hosts || []).join(", ")); } }
+						],
+						order: [[2, 'desc']]
+					});
+				}
+				else {
+					alert('You are not logged in. Please check your setup with Keycloak.');
+				}
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm as well as Redirect URI and Web Origins information. (i.e. are you missing an \'*\' somewhere?');
+			});
+		});
+	</script>
+	<!-- END Java Script for this page -->
+
+</body>
+
+</html>
