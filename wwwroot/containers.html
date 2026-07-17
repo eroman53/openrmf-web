@@ -1,0 +1,347 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>STOOGE Container Security</title>
+	<meta name="description" content="Trivy vulnerability scanning: live scans, history, and trends">
+	<meta name="referrer" content="origin">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="/assets/images/favicon-32.png" type="image/png">
+
+	<!-- Bootstrap CSS -->
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Font Awesome CSS -->
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Custom CSS -->
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+
+	<!-- BEGIN CSS for this page -->
+	<link rel="stylesheet" type="text/css" href="/assets/css/dataTables.bootstrap4.min.css" />
+	<!-- END CSS for this page -->
+
+</head>
+
+<body class="adminbody">
+
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+
+		<!-- top bar navigation -->
+		<div id="includeNavBarLink"></div>
+		<!-- End Navigation -->
+
+		<!-- Left Sidebar -->
+		<div id="includeSidebarLink"></div>
+		<!-- End Sidebar -->
+
+		<div class="content-page">
+			<!-- Start content -->
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Container Security</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">Container Security</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+					<!-- end row -->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-6 col-xl-6">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-crosshairs"></i> Trivy Scanner</h3></div>
+								<div class="card-body">
+									<form>
+										<div class="form-row">
+											<div class="form-group col-md-4">
+												<div class="custom-control custom-checkbox" style="margin-top: 2.2rem;">
+													<input type="checkbox" class="custom-control-input" id="frmEnabled">
+													<label class="custom-control-label" for="frmEnabled">Scheduled scans</label>
+												</div>
+											</div>
+											<div class="form-group col-md-4">
+												<label for="frmInterval">Every (hours, 0 = manual)</label>
+												<input type="number" class="form-control" id="frmInterval" min="0" value="0">
+											</div>
+											<div class="form-group col-md-4">
+												<label for="frmTimeout">Timeout (minutes)</label>
+												<input type="number" class="form-control" id="frmTimeout" min="1" value="15">
+											</div>
+										</div>
+										<div class="form-group">
+											<label for="frmTarget">Folder to scan (inside the scanner container)</label>
+											<input type="text" class="form-control" id="frmTarget" value="/target">
+											<small class="form-text text-muted">The host folder is mounted at <code>/target</code>
+												via <code>TRIVYSCAN_TARGET</code> in the stack config; scan the whole mount or a subfolder.</small>
+										</div>
+										<div class="form-group">
+											<label for="frmSystem">Attach results to System Package</label>
+											<select class="form-control" id="frmSystem"></select>
+										</div>
+										<div class="form-group">
+											<button type="button" class="btn btn-sm btn-primary" id="btnSaveCfg" style="display:none;"
+												onclick="saveConfig();"><i class="fa fa-save"></i> Save</button>
+											<button type="button" class="btn btn-sm btn-danger" id="btnScanNow" style="display:none;"
+												onclick="scanNow();"><i class="fa fa-play"></i> Scan Now</button>
+											<span id="scanStatus" class="text-muted" style="margin-left: 10px;"></span>
+										</div>
+									</form>
+								</div>
+							</div>
+						</div>
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-6 col-xl-6">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-history"></i> Scan Runs
+									<button type="button" class="btn btn-sm btn-secondary float-right" onclick="loadAll();">
+										<i class="fa fa-refresh"></i> Refresh</button></h3></div>
+								<div class="card-body">
+									<div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+										<table class="table table-sm table-bordered" id="tblRuns">
+											<thead><tr><th>When</th><th>By</th><th>Status</th><th>C/H/M/L</th><th>Δ new/res/persist</th><th>Detail</th></tr></thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-area-chart"></i> Scan History &amp; Trend</h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table class="table table-striped table-bordered" id="tblTrend" style="width:100%">
+											<thead><tr><th>Scan</th><th>Date</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>New</th><th>Resolved</th><th>Persisting</th></tr></thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-bug"></i> Open Findings</h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table id="tblFindings" class="table table-striped table-bordered" style="width:100%">
+											<thead><tr><th>Target</th><th>Vulnerability | Package</th><th>Finding</th><th>Severity</th><th>First Seen</th><th>Last Seen</th></tr></thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+				</div>
+				<!-- END container-fluid -->
+
+			</div>
+			<!-- END content -->
+
+		</div>
+		<!-- END content-page -->
+
+		<footer class="footer">
+			<div id="includeFooterLink"></div>
+		</footer>
+		<div id="includeAutoLogin"></div>
+
+	</div>
+	<!-- END main -->
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/moment.min.js"></script>
+
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+
+	<!-- App js -->
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/js/jquery.dataTables.min.js"></script>
+	<script src="/assets/js/dataTables.bootstrap4.min.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<!-- BEGIN Java Script for this page -->
+	<script>
+		var tableTrend = null;
+		var tableFindings = null;
+		var currentSystemId = "";
+
+		function hdr() { return { 'Authorization': 'Bearer ' + keycloak.token }; }
+		function sevName(s) { return { 4: "Critical", 3: "High", 2: "Medium", 1: "Low" }[s] || s; }
+
+		async function fillSystems() {
+			let r = await fetch(readAPI + "systems", { headers: hdr() });
+			if (!r.ok) return;
+			var systems = await r.json();
+			var opts = '<option value="">[ Choose a System Package ]</option>';
+			systems.forEach(function (s) {
+				opts += '<option value="' + s.internalIdString + '">' + htmlEscape(s.title) + '</option>';
+			});
+			$("#frmSystem").html(opts);
+		}
+
+		async function loadConfig() {
+			let r = await fetch(trivyscanAPI + "config", { headers: hdr() });
+			if (!r.ok) return;
+			var c = await r.json();
+			$("#frmEnabled").prop("checked", c.enabled);
+			$("#frmInterval").val(c.intervalHours);
+			$("#frmTimeout").val(c.timeoutMinutes);
+			$("#frmTarget").val(c.targetPath || "/target");
+			if (c.systemGroupId) $("#frmSystem").val(c.systemGroupId);
+			currentSystemId = c.systemGroupId || "";
+			var status = c.running ? '<span class="text-primary"><i class="fa fa-spinner fa-spin"></i> scan running...</span>'
+				: (c.lastRun ? "last run " + moment(c.lastRun).format("MM/DD/YY HH:mm") : "never run");
+			$("#scanStatus").html(status);
+		}
+
+		async function saveConfig() {
+			var body = {
+				enabled: $("#frmEnabled").is(":checked"),
+				targetPath: $("#frmTarget").val(),
+				systemGroupId: $("#frmSystem").val(),
+				systemTitle: $("#frmSystem option:selected").text(),
+				intervalHours: parseInt($("#frmInterval").val()) || 0,
+				timeoutMinutes: parseInt($("#frmTimeout").val()) || 15
+			};
+			let r = await fetch(trivyscanAPI + "config", {
+				method: 'PUT',
+				headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			if (r.ok) { swal("Scanner configuration saved.", "Click OK to continue!", "success"); loadAll(); }
+			else swal("There was a problem saving. Are you an Administrator?", "Click OK to continue!", "error");
+		}
+
+		async function scanNow() {
+			let r = await fetch(trivyscanAPI + "run", { method: 'POST', headers: hdr() });
+			if (r.ok) {
+				$("#scanStatus").html('<span class="text-primary"><i class="fa fa-spinner fa-spin"></i> scan running...</span>');
+				swal("Scan started. Refresh in a moment to see the results.", "Click OK to continue!", "success");
+				setTimeout(loadAll, 12000);
+			} else {
+				var msg = await r.text();
+				swal("Could not start the scan. " + msg, "Click OK to continue!", "error");
+			}
+		}
+
+		async function loadRuns() {
+			let r = await fetch(trivyscanAPI + "runs", { headers: hdr() });
+			var tb = $("#tblRuns tbody"); tb.empty();
+			if (!r.ok) return;
+			var runs = await r.json();
+			runs.forEach(function (x) {
+				var badge = x.status == "success" ? "badge-success" : "badge-danger";
+				tb.append('<tr><td>' + moment(x.when).format("MM/DD HH:mm") + '</td><td>' + htmlEscape(x.startedBy)
+					+ '</td><td><span class="badge ' + badge + '">' + x.status + '</span></td><td>'
+					+ x.critical + '/' + x.high + '/' + x.medium + '/' + x.low + '</td><td>'
+					+ x.newFindings + '/' + x.resolvedFindings + '/' + x.persistingFindings + '</td><td><small>'
+					+ htmlEscape(x.detail || "") + '</small></td></tr>');
+			});
+		}
+
+		async function loadTrend() {
+			tableTrend.clear();
+			if (!currentSystemId) { tableTrend.draw(); return; }
+			let r = await fetch(scanhistoryAPI + "scan/" + encodeURIComponent(currentSystemId) + "/trend?scanType=trivy", { headers: hdr() });
+			if (r.ok) tableTrend.rows.add(await r.json());
+			tableTrend.draw();
+		}
+
+		async function loadFindings() {
+			tableFindings.clear();
+			if (!currentSystemId) { tableFindings.draw(); return; }
+			let r = await fetch(scanhistoryAPI + "scan/" + encodeURIComponent(currentSystemId) + "/findings?scanType=trivy&status=open", { headers: hdr() });
+			if (r.ok) tableFindings.rows.add(await r.json());
+			tableFindings.draw();
+		}
+
+		async function loadAll() {
+			await loadConfig();
+			await loadRuns();
+			await loadTrend();
+			await loadFindings();
+		}
+
+		$(document).ready(function () {
+			// authentication first
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					// setup the User Interface
+					setupOpenRMFUI();
+					if (isAdministrator()) $("#btnSaveCfg").show();
+					if (canUpload()) $("#btnScanNow").show();
+
+					tableTrend = $('#tblTrend').DataTable({
+						"responsive": false, "searching": false, "pageLength": 10, "autoWidth": false,
+						"deferRender": true, "data": [], "ordering": false,
+						"columns": [
+							{ "data": null, "render": function (d) { return htmlEscape(d.filename); } },
+							{ "data": null, "render": function (d) { return moment(d.created).format("MM/DD/YY HH:mm"); } },
+							{ "data": "totalCritical" }, { "data": "totalHigh" }, { "data": "totalMedium" }, { "data": "totalLow" },
+							{ "data": "newFindings" }, { "data": "resolvedFindings" }, { "data": "persistingFindings" }
+						]
+					});
+					tableFindings = $('#tblFindings').DataTable({
+						"responsive": false, "searching": true, "pageLength": 25, "autoWidth": false,
+						"deferRender": true, "data": [],
+						"columns": [
+							{ "data": null, "render": function (d) { return htmlEscape(d.hostname); } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.pluginId); } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.pluginName || ""); } },
+							{ "data": null, "render": function (d) { return sevName(d.severity); } },
+							{ "data": null, "render": function (d) { return moment(d.firstSeen).format("MM/DD/YY"); } },
+							{ "data": null, "render": function (d) { return moment(d.lastSeen).format("MM/DD/YY"); } }
+						],
+						order: [[3, 'asc']]
+					});
+
+					fillSystems().then(loadAll);
+				}
+				else {
+					alert('You are not logged in. Please check your setup with Keycloak.');
+				}
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm as well as Redirect URI and Web Origins information. (i.e. are you missing an \'*\' somewhere?');
+			});
+		});
+	</script>
+	<!-- END Java Script for this page -->
+
+</body>
+
+</html>
