@@ -1,0 +1,498 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<title>STOOGE Review Tasks</title>
+	<meta name="description" content="Task management and tracking for checklist and vulnerability review">
+	<meta name="referrer" content="origin">
+
+	<!-- Favicon -->
+	<link rel="shortcut icon" href="/assets/images/favicon-32.png" type="image/png">
+
+	<!-- Bootstrap CSS -->
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Font Awesome CSS -->
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+	<!-- Custom CSS -->
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+
+	<!-- BEGIN CSS for this page -->
+	<link rel="stylesheet" type="text/css" href="/assets/css/dataTables.bootstrap4.min.css" />
+	<!-- END CSS for this page -->
+
+</head>
+
+<body class="adminbody">
+
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+
+		<!-- top bar navigation -->
+		<div id="includeNavBarLink"></div>
+		<!-- End Navigation -->
+
+		<!-- Left Sidebar -->
+		<div id="includeSidebarLink"></div>
+		<!-- End Sidebar -->
+
+		<div class="content-page">
+			<!-- Start content -->
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Review Tasks</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">Tasks</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+					<!-- end row -->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-8 col-xl-8">
+							<div class="card mb-3">
+								<div class="card-header">
+									<h3><i class="fa fa-filter"></i> View</h3>
+								</div>
+								<div class="card-body">
+									<form class="form-inline">
+										<div class="form-group mr-3">
+											<label class="mr-2" for="viewMode">Show</label>
+											<select class="form-control" id="viewMode" onchange="viewChanged();">
+												<option value="mine">My Tasks</option>
+												<option value="system">By System Package</option>
+											</select>
+										</div>
+										<div class="form-group mr-3" id="grpSystem" style="display:none;">
+											<select class="form-control" id="checklistSystemFilter" onchange="loadTasks();">
+												<option value="">[ Choose a System Package ]</option>
+											</select>
+										</div>
+										<div class="form-group mr-3">
+											<label class="mr-2" for="statusFilter">Status</label>
+											<select class="form-control" id="statusFilter" onchange="loadTasks();">
+												<option value="">Active</option>
+												<option value="Open">Open</option>
+												<option value="In Progress">In Progress</option>
+												<option value="Blocked">Blocked</option>
+												<option value="In Review">In Review</option>
+												<option value="Completed">Completed</option>
+												<option value="Cancelled">Cancelled</option>
+											</select>
+										</div>
+										<button type="button" class="btn btn-sm btn-success" id="btnNewTask" style="display:none;"
+											onclick="newTask();"><i class="fa fa-plus"></i> New Task</button>
+									</form>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+					<div class="row">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-check-square-o"></i> Tasks</h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table id="tblTasks" class="table table-striped table-bordered" style="width:100%">
+											<thead>
+												<tr>
+													<th>Task</th>
+													<th>Target</th>
+													<th>Assigned To</th>
+													<th>Priority</th>
+													<th>Status</th>
+													<th>Due</th>
+													<th>Updated</th>
+													<th></th>
+												</tr>
+											</thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row-->
+
+				</div>
+				<!-- END container-fluid -->
+
+			</div>
+			<!-- END content -->
+
+		</div>
+		<!-- END content-page -->
+
+		<footer class="footer">
+			<div id="includeFooterLink"></div>
+		</footer>
+		<div id="includeAutoLogin"></div>
+
+	</div>
+	<!-- END main -->
+
+	<!-- Task edit modal -->
+	<div class="modal fade" id="taskModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="taskModalTitle">New Task</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
+					<form>
+						<input type="hidden" id="frmTaskId" />
+						<div class="form-group">
+							<label for="frmTaskTitle">Title</label>
+							<input type="text" class="form-control" id="frmTaskTitle" placeholder="Review RHEL 7 STIG on host1" />
+						</div>
+						<div class="form-row" id="grpTaskSystem">
+							<div class="form-group col-md-6">
+								<label for="frmTaskSystem">System Package</label>
+								<select class="form-control" id="frmTaskSystem" onchange="taskSystemChanged();"></select>
+							</div>
+							<div class="form-group col-md-6">
+								<label for="frmTaskEntityType">Target Type</label>
+								<select class="form-control" id="frmTaskEntityType" onchange="taskEntityTypeChanged();">
+									<option value="system">Whole system</option>
+									<option value="checklist">Checklist</option>
+									<option value="vulnerability">Single vulnerability</option>
+									<option value="poam">POA&amp;M item</option>
+									<option value="scan">Patch scan</option>
+								</select>
+							</div>
+						</div>
+						<div class="form-group" id="grpTaskChecklist" style="display:none;">
+							<label for="frmTaskChecklist">Checklist</label>
+							<select class="form-control" id="frmTaskChecklist"></select>
+						</div>
+						<div class="form-group" id="grpTaskVuln" style="display:none;">
+							<label for="frmTaskVuln">Vulnerability ID (e.g. V-204392)</label>
+							<input type="text" class="form-control" id="frmTaskVuln" />
+						</div>
+						<div class="form-row">
+							<div class="form-group col-md-4">
+								<label for="frmTaskAssignee">Assigned To (username)</label>
+								<input type="text" class="form-control" id="frmTaskAssignee" />
+							</div>
+							<div class="form-group col-md-3">
+								<label for="frmTaskPriority">Priority</label>
+								<select class="form-control" id="frmTaskPriority">
+									<option>High</option>
+									<option selected>Medium</option>
+									<option>Low</option>
+								</select>
+							</div>
+							<div class="form-group col-md-3">
+								<label for="frmTaskStatus">Status</label>
+								<select class="form-control" id="frmTaskStatus">
+									<option>Open</option>
+									<option>In Progress</option>
+									<option>Blocked</option>
+									<option>In Review</option>
+									<option>Completed</option>
+									<option>Cancelled</option>
+								</select>
+							</div>
+							<div class="form-group col-md-2">
+								<label for="frmTaskDue">Due</label>
+								<input type="date" class="form-control" id="frmTaskDue" />
+							</div>
+						</div>
+						<div class="form-group">
+							<label for="frmTaskDescription">Description</label>
+							<textarea class="form-control" id="frmTaskDescription" rows="2"></textarea>
+						</div>
+					</form>
+					<div id="taskExtras" style="display:none;">
+						<hr />
+						<h6><i class="fa fa-comments"></i> Comments</h6>
+						<div id="taskComments" class="mb-2"></div>
+						<div class="input-group mb-3">
+							<input type="text" class="form-control" id="frmNewComment" placeholder="Add a comment..." />
+							<div class="input-group-append">
+								<button class="btn btn-secondary" type="button" onclick="addComment();">Add</button>
+							</div>
+						</div>
+						<h6><i class="fa fa-history"></i> History</h6>
+						<div id="taskHistory" style="max-height: 160px; overflow-y: auto;"></div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary" onclick="saveTask();">Save</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/moment.min.js"></script>
+
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+
+	<!-- App js -->
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/js/jquery.dataTables.min.js"></script>
+	<script src="/assets/js/dataTables.bootstrap4.min.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<!-- BEGIN Java Script for this page -->
+	<script>
+		var tableTasks = null;
+		var tasksById = {};
+		var editingIsNew = false;
+
+		function hdr() { return { 'Authorization': 'Bearer ' + keycloak.token }; }
+
+		function viewChanged() {
+			if ($("#viewMode").val() == "system") $("#grpSystem").show(); else $("#grpSystem").hide();
+			loadTasks();
+		}
+
+		async function loadTasks() {
+			var url;
+			if ($("#viewMode").val() == "mine") {
+				url = tasksAPI + "tasks/mine";
+				if ($("#statusFilter").val()) url += "?status=" + encodeURIComponent($("#statusFilter").val());
+			} else {
+				var sys = $("#checklistSystemFilter").val();
+				if (!sys) { tableTasks.clear().draw(); return; }
+				url = tasksAPI + "tasks/system/" + encodeURIComponent(sys);
+				if ($("#statusFilter").val()) url += "?status=" + encodeURIComponent($("#statusFilter").val());
+			}
+			let r = await fetch(url, { headers: hdr() });
+			if (!r.ok) { swal("There was a problem loading tasks.", "Click OK to continue!", "error"); return; }
+			var data = await r.json();
+			if ($("#viewMode").val() == "system" && !$("#statusFilter").val())
+				data = data.filter(function (t) { return t.status != "Completed" && t.status != "Cancelled"; });
+			tasksById = {};
+			data.forEach(function (t) { tasksById[t.internalIdString] = t; });
+			tableTasks.clear(); tableTasks.rows.add(data).draw();
+		}
+
+		function statusBadge(s) {
+			var cls = { "Open": "badge-secondary", "In Progress": "badge-primary", "Blocked": "badge-danger",
+				"In Review": "badge-warning", "Completed": "badge-success", "Cancelled": "badge-light" }[s] || "badge-secondary";
+			return '<span class="badge ' + cls + '">' + htmlEscape(s) + '</span>';
+		}
+
+		function dueCell(t) {
+			if (!t.dueDate) return "";
+			var m = moment(t.dueDate);
+			var overdue = m.isBefore(moment()) && t.status != "Completed" && t.status != "Cancelled";
+			return (overdue ? '<span class="text-danger font-weight-bold">' : '<span>') + m.format("MM/DD/YY") + (overdue ? ' <i class="fa fa-exclamation-triangle"></i></span>' : '</span>');
+		}
+
+		async function fillTaskSystems() {
+			// reuse the report-filter systems call to populate both selects
+			let response = await fetch(readAPI + "systems", { headers: hdr() });
+			if (!response.ok) return;
+			var systems = await response.json();
+			var opts = '';
+			systems.forEach(function (s) {
+				opts += '<option value="' + s.internalIdString + '">' + htmlEscape(s.title) + '</option>';
+			});
+			$("#frmTaskSystem").html(opts);
+			$("#checklistSystemFilter").html('<option value="">[ Choose a System Package ]</option>' + opts);
+		}
+
+		async function taskSystemChanged() {
+			if ($("#frmTaskEntityType").val() == "checklist") await fillChecklists();
+		}
+
+		async function taskEntityTypeChanged() {
+			var t = $("#frmTaskEntityType").val();
+			$("#grpTaskChecklist").toggle(t == "checklist");
+			$("#grpTaskVuln").toggle(t == "vulnerability");
+			if (t == "checklist") await fillChecklists();
+		}
+
+		async function fillChecklists() {
+			var sys = $("#frmTaskSystem").val();
+			if (!sys) return;
+			let r = await fetch(readAPI + "systems/" + encodeURIComponent(sys) + "/", { headers: hdr() });
+			if (!r.ok) { $("#frmTaskChecklist").html('<option value="">(could not load checklists)</option>'); return; }
+			var checklists = await r.json();
+			var opts = '';
+			checklists.forEach(function (c) {
+				var label = (c.hostName ? c.hostName + " — " : "") + (c.stigType || c.title || c.internalIdString);
+				opts += '<option value="' + c.internalIdString + '" data-label="' + htmlEscape(label) + '">' + htmlEscape(label) + '</option>';
+			});
+			$("#frmTaskChecklist").html(opts || '<option value="">(no checklists on this system)</option>');
+		}
+
+		function newTask() {
+			editingIsNew = true;
+			$("#taskModalTitle").text("New Task");
+			$("#frmTaskId").val("");
+			$("#frmTaskTitle").val(""); $("#frmTaskDescription").val("");
+			$("#frmTaskAssignee").val(""); $("#frmTaskPriority").val("Medium");
+			$("#frmTaskStatus").val("Open"); $("#frmTaskDue").val("");
+			$("#frmTaskEntityType").val("system"); taskEntityTypeChanged();
+			$("#grpTaskSystem").show(); $("#taskExtras").hide();
+			var sys = $("#checklistSystemFilter").val();
+			if (sys) $("#frmTaskSystem").val(sys);
+			$("#taskModal").modal("show");
+		}
+
+		function editTask(id) {
+			var t = tasksById[id]; if (!t) return;
+			editingIsNew = false;
+			$("#taskModalTitle").text("Task — " + t.title);
+			$("#frmTaskId").val(id);
+			$("#frmTaskTitle").val(t.title); $("#frmTaskDescription").val(t.description || "");
+			$("#frmTaskAssignee").val(t.assignedTo || ""); $("#frmTaskPriority").val(t.priority);
+			$("#frmTaskStatus").val(t.status);
+			$("#frmTaskDue").val(t.dueDate ? moment(t.dueDate).format("YYYY-MM-DD") : "");
+			$("#grpTaskSystem").hide(); $("#grpTaskChecklist").hide(); $("#grpTaskVuln").hide();
+			renderExtras(t); $("#taskExtras").show();
+			$("#taskModal").modal("show");
+		}
+
+		function renderExtras(t) {
+			var c = "";
+			(t.comments || []).forEach(function (x) {
+				c += '<div class="mb-1"><b>' + htmlEscape(x.who) + '</b> <small class="text-muted">'
+					+ moment(x.when).format("MM/DD/YY HH:mm") + '</small><br/>' + htmlEscape(x.text) + '</div>';
+			});
+			$("#taskComments").html(c || '<span class="text-muted">No comments yet.</span>');
+			var h = "";
+			(t.history || []).slice().reverse().forEach(function (x) {
+				h += '<div><small><b>' + htmlEscape(x.who) + '</b> ' + moment(x.when).format("MM/DD/YY HH:mm") + ' — '
+					+ htmlEscape(x.field) + (x.from ? ': "' + htmlEscape(x.from) + '" → "' + htmlEscape(x.to) + '"' : ': ' + htmlEscape(x.to))
+					+ '</small></div>';
+			});
+			$("#taskHistory").html(h);
+		}
+
+		async function saveTask() {
+			var id = $("#frmTaskId").val();
+			var body = {
+				title: $("#frmTaskTitle").val(),
+				description: $("#frmTaskDescription").val(),
+				assignedTo: $("#frmTaskAssignee").val(),
+				priority: $("#frmTaskPriority").val(),
+				status: $("#frmTaskStatus").val(),
+				dueDate: $("#frmTaskDue").val() ? $("#frmTaskDue").val() : null
+			};
+			var url, method;
+			if (editingIsNew) {
+				if (!body.title) { swal("Please enter a title.", "Click OK to continue!", "error"); return; }
+				body.systemGroupId = $("#frmTaskSystem").val();
+				body.entityType = $("#frmTaskEntityType").val();
+				if (body.entityType == "checklist") {
+					body.entityId = $("#frmTaskChecklist").val();
+					body.entityLabel = $("#frmTaskChecklist option:selected").data("label") || "";
+				} else if (body.entityType == "vulnerability") {
+					body.entityId = ($("#frmTaskChecklist").val() || "") + "|" + $("#frmTaskVuln").val();
+					body.entityLabel = $("#frmTaskVuln").val();
+				} else {
+					body.entityId = body.systemGroupId;
+					body.entityLabel = $("#frmTaskSystem option:selected").text();
+				}
+				url = tasksAPI + "tasks"; method = "POST";
+			} else {
+				url = tasksAPI + "tasks/" + id; method = "PUT";
+			}
+			let r = await fetch(url, {
+				method: method,
+				headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			if (r.ok) {
+				$("#taskModal").modal("hide");
+				swal("The task was saved.", "Click OK to continue!", "success");
+				loadTasks();
+			} else {
+				swal("There was a problem saving the task.", "Click OK to continue!", "error");
+			}
+		}
+
+		async function addComment() {
+			var id = $("#frmTaskId").val();
+			var text = $("#frmNewComment").val();
+			if (!id || !text) return;
+			let r = await fetch(tasksAPI + "tasks/" + id + "/comments", {
+				method: 'POST',
+				headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text: text })
+			});
+			if (r.ok) {
+				var t = await r.json();
+				tasksById[id] = t;
+				$("#frmNewComment").val("");
+				renderExtras(t);
+			}
+		}
+
+		$(document).ready(function () {
+			// authentication first
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					// setup the User Interface
+					setupOpenRMFUI();
+					fillTaskSystems();
+					if (canUpload()) $("#btnNewTask").show();
+
+					tableTasks = $('#tblTasks').DataTable({
+						"responsive": false, "searching": true, "pageLength": 25, "autoWidth": false,
+						"deferRender": true, "data": [],
+						"columns": [
+							{ "data": null, "render": function (d) { return htmlEscape(d.title); } },
+							{ "data": null, "render": function (d) { return '<small>' + htmlEscape(d.entityType) + '</small><br/>' + htmlEscape(d.entityLabel || ""); } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.assignedTo || "(unassigned)"); } },
+							{ "data": null, "render": function (d) { return htmlEscape(d.priority); } },
+							{ "data": null, "render": function (d) { return statusBadge(d.status); } },
+							{ "data": null, "render": function (d) { return dueCell(d); } },
+							{ "data": null, "render": function (d) { return d.updatedOn ? moment(d.updatedOn).format("MM/DD/YY HH:mm") : moment(d.created).format("MM/DD/YY HH:mm"); } },
+							{
+								"data": null, "orderable": false, "className": 'text-center',
+								"render": function (d) {
+									return '<button type="button" class="btn btn-sm btn-primary" title="Open this task" onclick="editTask(\'' + d.internalIdString + '\');"><i class="fa fa-pencil"></i></button>';
+								}
+							}
+						]
+					});
+					loadTasks();
+				}
+				else {
+					alert('You are not logged in. Please check your setup with Keycloak.');
+				}
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm as well as Redirect URI and Web Origins information. (i.e. are you missing an \'*\' somewhere?');
+			});
+		});
+	</script>
+	<!-- END Java Script for this page -->
+
+</body>
+
+</html>
