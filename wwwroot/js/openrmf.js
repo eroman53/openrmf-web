@@ -455,6 +455,13 @@ async function getSystemRecord(systemGroupId) {
 			$("#modalSystemTitle").text(item.title);
 			$("#divSystemTitle").html("<b>Title:</b> " + item.title);
 			$("#frmSystemTitle").val(item.title);
+			if (typeof isAdministrator === "function" && isAdministrator()) {
+				$("#grpAccess").show();
+				$("#frmAccessRestricted").prop("checked", item.accessRestricted === true);
+				$("#frmAccessTeams").val((item.accessTeams || []).join(", "));
+				$("#frmAccessUsers").val((item.accessUsers || []).join(", "));
+				if (typeof toggleAccessFields === "function") toggleAccessFields();
+			}
 			if (item.description){
 				$("#divSystemDescription").html("<b>Description:</b> " + htmlEscape(item.description));
 				$("#frmSystemDescription").val(item.description);
@@ -560,6 +567,30 @@ function addSystem() {
 			}
 	});
 	return false;
+}
+
+function toggleAccessFields(){
+	if ($("#frmAccessRestricted").is(":checked")) $("#grpAccessDetail").show();
+	else $("#grpAccessDetail").hide();
+}
+
+// save the package-level access grant (Administrator only)
+function saveAccess(systemGroupId){
+	if (!systemGroupId) systemGroupId = sessionStorage.getItem("currentSystem");
+	function splitList(v){ return (v||"").split(",").map(function(s){return s.trim();}).filter(function(s){return s.length>0;}); }
+	var body = {
+		accessRestricted: $("#frmAccessRestricted").is(":checked"),
+		accessTeams: splitList($("#frmAccessTeams").val()),
+		accessUsers: splitList($("#frmAccessUsers").val())
+	};
+	fetch(saveAPI + "system/" + encodeURIComponent(systemGroupId) + "/access", {
+		method: 'PUT',
+		headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	}).then(function(r){
+		if (r.ok) { $("#accessSaved").text("Access saved."); setTimeout(function(){ $("#accessSaved").text(""); }, 2500); }
+		else { swal("There was a problem saving package access. Are you an Administrator?", "Click OK to continue!", "error"); }
+	});
 }
 
 function updateSystem(systemGroupId){

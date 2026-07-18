@@ -545,6 +545,20 @@
 						<label for="frmNessusFile">Nessus / ACAS File *.nessus (if any, up to 500MB)</label><br />
 						<input type="file" name="frmNessusFile" id="frmNessusFile" />
 					</div>
+						<div id="grpAccess" style="display:none; border-top:1px solid #e5e5e5; padding-top:12px;">
+							<h6><i class="fa fa-lock"></i> Package Access (RBAC)</h6>
+							<div class="custom-control custom-checkbox mb-2">
+								<input type="checkbox" class="custom-control-input" id="frmAccessRestricted" onchange="toggleAccessFields();">
+								<label class="custom-control-label" for="frmAccessRestricted">Restrict this package to specific teams / users</label>
+							</div>
+							<div id="grpAccessDetail" style="display:none;">
+								<div class="form-group"><label for="frmAccessTeams">Teams (Keycloak groups, comma-separated)</label><input type="text" class="form-control" id="frmAccessTeams" placeholder="team-alpha, team-bravo"></div>
+								<div class="form-group"><label for="frmAccessUsers">Individual users (usernames, comma-separated)</label><input type="text" class="form-control" id="frmAccessUsers" placeholder="jsmith, adoe"></div>
+								<small class="form-text text-muted">Administrators always have access. Unrestricted packages are visible to all authenticated users.</small>
+							</div>
+							<button type="button" class="btn btn-sm btn-outline-primary" onclick="saveAccess(getParameterByName('id'));"><i class="fa fa-save"></i> Save Access</button>
+							<span id="accessSaved" class="text-success" style="margin-left:8px;"></span>
+						</div>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
