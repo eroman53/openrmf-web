@@ -230,7 +230,9 @@
 			$("#detailRow").show();
 			$("#coverageTitle").html('<i class="fa fa-crosshairs"></i> Asset Coverage — ' + htmlEscape(p.title));
 
-			var cov = '<p>' + p.coverage.scannedHosts + ' host(s) in scans · ' + p.coverage.checklistHosts + ' host(s) with checklists</p>';
+			var cov = '<p>' + p.coverage.scannedHosts + ' host(s) in scans · ' + p.coverage.checklistHosts + ' host(s) with checklists';
+			if (p.coverage.registryAssets > 0) cov += ' · ' + p.coverage.registryAssets + ' asset(s) in registry';
+			cov += '</p>';
 			cov += '<b>Scanned, but no STIG checklist:</b>';
 			cov += listOrNone(p.coverage.scannedNoChecklist);
 			cov += '<b>Checklist host not seen in scans:</b>';
