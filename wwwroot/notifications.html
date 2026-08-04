@@ -1,0 +1,310 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>STOOGE Notifications</title>
+	<meta name="description" content="Email notification subscriptions and the weekly ConMon digest">
+	<meta name="referrer" content="origin">
+	<link rel="shortcut icon" href="/assets/images/favicon-32.png" type="image/png">
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body class="adminbody">
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+		<div id="includeNavBarLink"></div>
+		<div id="includeSidebarLink"></div>
+
+		<div class="content-page">
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Notifications</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">Notifications</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<!-- My subscriptions -->
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-7 col-xl-7">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-bell-o"></i> My Email Subscription</h3></div>
+								<div class="card-body">
+									<form>
+										<div class="form-group">
+											<label for="frmEmail">Send alerts to</label>
+											<input type="email" class="form-control" id="frmEmail" placeholder="defaults to your account email">
+										</div>
+										<div class="form-group">
+											<label>Notify me about these events</label>
+											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtSaved" checked><label class="custom-control-label" for="evtSaved">Checklist saved (new or updated)</label></div>
+											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtDeleted"><label class="custom-control-label" for="evtDeleted">Checklist deleted</label></div>
+											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtPatch" checked><label class="custom-control-label" for="evtPatch">Patch scan updated</label></div>
+											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtSysDel"><label class="custom-control-label" for="evtSysDel">System deleted</label></div>
+										</div>
+										<div class="form-group">
+											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="frmScopeAll" checked onchange="toggleScope();"><label class="custom-control-label" for="frmScopeAll">All system packages I can access</label></div>
+											<select multiple class="form-control mt-2" id="frmSystems" style="display:none; height: 120px;"></select>
+											<small class="form-text text-muted">Untick to choose specific packages. You only ever receive alerts for packages your access allows.</small>
+										</div>
+										<div class="form-row">
+											<div class="form-group col-md-6">
+												<label for="frmFrequency">Delivery</label>
+												<select class="form-control" id="frmFrequency">
+													<option value="immediate">Immediate (email per event)</option>
+													<option value="weekly">Weekly (rolled into the digest)</option>
+												</select>
+											</div>
+											<div class="form-group col-md-6">
+												<div class="custom-control custom-checkbox" style="margin-top: 2.2rem;"><input type="checkbox" class="custom-control-input" id="frmDigest" checked><label class="custom-control-label" for="frmDigest">Include the weekly ConMon digest</label></div>
+											</div>
+										</div>
+										<button type="button" class="btn btn-sm btn-primary" onclick="createSub();"><i class="fa fa-plus"></i> Add Subscription</button>
+									</form>
+									<hr>
+									<h5>My subscriptions</h5>
+									<div class="table-responsive">
+										<table class="table table-sm table-bordered" id="tblSubs">
+											<thead><tr><th>Email</th><th>Events</th><th>Scope</th><th>Delivery</th><th>Digest</th><th></th></tr></thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Recent notifications -->
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-5 col-xl-5">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-history"></i> Recent Notifications
+									<button type="button" class="btn btn-sm btn-secondary float-right" onclick="loadLog();"><i class="fa fa-refresh"></i> Refresh</button></h3></div>
+								<div class="card-body">
+									<div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+										<table class="table table-sm table-bordered" id="tblLog">
+											<thead><tr><th>When</th><th>Subject</th><th>Status</th></tr></thead>
+											<tbody></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row -->
+
+					<!-- Admin: SMTP + digest cadence -->
+					<div class="row" id="adminCard" style="display:none;">
+						<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xl-12">
+							<div class="card mb-3">
+								<div class="card-header"><h3><i class="fa fa-cog"></i> Delivery Settings (Administrator)</h3></div>
+								<div class="card-body">
+									<form>
+										<div class="form-row">
+											<div class="form-group col-md-3">
+												<div class="custom-control custom-checkbox" style="margin-top:2.2rem;"><input type="checkbox" class="custom-control-input" id="cfgEnabled"><label class="custom-control-label" for="cfgEnabled">Notifications enabled</label></div>
+											</div>
+											<div class="form-group col-md-6"><label for="cfgHost">SMTP host</label><input type="text" class="form-control" id="cfgHost"></div>
+											<div class="form-group col-md-2"><label for="cfgPort">Port</label><input type="number" class="form-control" id="cfgPort" value="587"></div>
+											<div class="form-group col-md-1"><div class="custom-control custom-checkbox" style="margin-top:2.2rem;"><input type="checkbox" class="custom-control-input" id="cfgTls" checked><label class="custom-control-label" for="cfgTls">TLS</label></div></div>
+										</div>
+										<div class="form-row">
+											<div class="form-group col-md-3"><label for="cfgUser">SMTP username</label><input type="text" class="form-control" id="cfgUser" autocomplete="off"></div>
+											<div class="form-group col-md-3"><label for="cfgPass">SMTP password</label><input type="password" class="form-control" id="cfgPass" autocomplete="new-password" placeholder="unchanged"></div>
+											<div class="form-group col-md-3"><label for="cfgFrom">From address</label><input type="text" class="form-control" id="cfgFrom"></div>
+											<div class="form-group col-md-3"><label for="cfgFromName">From name</label><input type="text" class="form-control" id="cfgFromName" value="STOOGE OpenRMF"></div>
+										</div>
+										<div class="form-row">
+											<div class="form-group col-md-3">
+												<label for="cfgDay">Weekly digest day</label>
+												<select class="form-control" id="cfgDay">
+													<option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option>
+												</select>
+											</div>
+											<div class="form-group col-md-3"><label for="cfgHour">Digest hour (0-23)</label><input type="number" class="form-control" id="cfgHour" min="0" max="23" value="7"></div>
+											<div class="form-group col-md-6"><label for="cfgTestTo">Test recipient</label>
+												<div class="input-group"><input type="email" class="form-control" id="cfgTestTo" placeholder="your email">
+													<div class="input-group-append"><button class="btn btn-secondary" type="button" onclick="sendTest();"><i class="fa fa-paper-plane"></i> Send test</button></div>
+												</div>
+											</div>
+										</div>
+										<button type="button" class="btn btn-sm btn-primary" onclick="saveConfig();"><i class="fa fa-save"></i> Save Settings</button>
+										<button type="button" class="btn btn-sm btn-danger" onclick="runDigest();"><i class="fa fa-play"></i> Run Weekly Digest Now</button>
+										<span id="cfgStatus" class="text-muted" style="margin-left:10px;"></span>
+									</form>
+								</div>
+							</div>
+						</div>
+					</div><!-- end row -->
+				</div>
+			</div>
+			<footer class="footer"><div id="includeFooterLink"></div></footer>
+			<div id="includeAutoLogin"></div>
+		</div>
+	</div>
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/moment.min.js"></script>
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<script>
+		function hdr() { return { 'Authorization': 'Bearer ' + keycloak.token }; }
+		function jhdr() { return { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' }; }
+
+		function toggleScope() {
+			$("#frmSystems").toggle(!$("#frmScopeAll").is(":checked"));
+		}
+
+		function selectedEvents() {
+			var e = [];
+			if ($("#evtSaved").is(":checked")) e.push("checklist.saved");
+			if ($("#evtDeleted").is(":checked")) e.push("checklist.deleted");
+			if ($("#evtPatch").is(":checked")) e.push("system.patchscan");
+			if ($("#evtSysDel").is(":checked")) e.push("system.deleted");
+			return e;
+		}
+
+		async function fillSystems() {
+			let r = await fetch(readAPI + "systems", { headers: hdr() });
+			if (!r.ok) return;
+			var systems = await r.json();
+			var opts = "";
+			systems.forEach(function (s) { opts += '<option value="' + s.internalIdString + '">' + htmlEscape(s.title) + '</option>'; });
+			$("#frmSystems").html(opts);
+		}
+
+		async function createSub() {
+			var events = selectedEvents();
+			if (events.length === 0) { swal("Choose at least one event to be notified about.", "Click OK to continue!", "warning"); return; }
+			var scopeAll = $("#frmScopeAll").is(":checked");
+			var ids = scopeAll ? [] : $("#frmSystems").val() || [];
+			if (!scopeAll && ids.length === 0) { swal("Pick at least one system package, or tick 'All system packages'.", "Click OK to continue!", "warning"); return; }
+			var body = {
+				email: $("#frmEmail").val().trim(),
+				eventTypes: events,
+				scopeAll: scopeAll,
+				systemGroupIds: ids,
+				frequency: $("#frmFrequency").val(),
+				includeConmonDigest: $("#frmDigest").is(":checked"),
+				enabled: true
+			};
+			let r = await fetch(notifyAPI + "subscriptions", { method: 'POST', headers: jhdr(), body: JSON.stringify(body) });
+			if (r.ok) { swal("Subscription added.", "Click OK to continue!", "success"); loadMine(); }
+			else swal("Could not add the subscription.", "Click OK to continue!", "error");
+		}
+
+		async function deleteSub(id) {
+			let r = await fetch(notifyAPI + "subscriptions/" + encodeURIComponent(id), { method: 'DELETE', headers: hdr() });
+			if (r.ok) loadMine();
+			else swal("Could not delete.", "Click OK to continue!", "error");
+		}
+
+		async function loadMine() {
+			let r = await fetch(notifyAPI + "subscriptions/mine", { headers: hdr() });
+			var tb = $("#tblSubs tbody"); tb.empty();
+			if (!r.ok) return;
+			var subs = await r.json();
+			if (subs.length === 0) { tb.append('<tr><td colspan="6" class="text-muted">no subscriptions yet</td></tr>'); return; }
+			subs.forEach(function (s) {
+				var scope = s.scopeAll ? "all accessible" : ((s.systemGroupIds || []).length + " package(s)");
+				tb.append('<tr><td>' + htmlEscape(s.email || "") + '</td><td>' + (s.eventTypes || []).length + '</td><td>' + scope
+					+ '</td><td>' + htmlEscape(s.frequency) + '</td><td>' + (s.includeConmonDigest ? "yes" : "no")
+					+ '</td><td><button class="btn btn-xs btn-danger" onclick="deleteSub(\'' + s.internalIdString + '\');"><i class="fa fa-trash"></i></button></td></tr>');
+			});
+		}
+
+		async function loadLog() {
+			let r = await fetch(notifyAPI + "log?limit=50", { headers: hdr() });
+			var tb = $("#tblLog tbody"); tb.empty();
+			if (!r.ok) return;
+			var rows = await r.json();
+			rows.forEach(function (x) {
+				var badge = x.status === "sent" ? "badge-success" : x.status === "failed" ? "badge-danger" : "badge-secondary";
+				tb.append('<tr><td>' + moment(x.when).format("MM/DD HH:mm") + '</td><td><small>' + htmlEscape(x.subject || "")
+					+ '</small></td><td><span class="badge ' + badge + '">' + htmlEscape(x.status || "") + '</span></td></tr>');
+			});
+		}
+
+		// ----- admin config -----
+		async function loadConfig() {
+			let r = await fetch(notifyAPI + "config", { headers: hdr() });
+			if (!r.ok) return;
+			var c = await r.json();
+			$("#cfgEnabled").prop("checked", c.enabled);
+			$("#cfgHost").val(c.smtpHost); $("#cfgPort").val(c.smtpPort); $("#cfgTls").prop("checked", c.smtpUseTls);
+			$("#cfgUser").val(c.smtpUsername); $("#cfgFrom").val(c.fromAddress); $("#cfgFromName").val(c.fromName);
+			$("#cfgDay").val(c.digestDayOfWeek); $("#cfgHour").val(c.digestHour);
+			if (c.hasPassword) $("#cfgPass").attr("placeholder", "unchanged (a password is set)");
+			$("#cfgStatus").text(c.lastDigestRun ? "last digest " + moment(c.lastDigestRun).format("MM/DD/YY HH:mm") : "digest not run yet");
+		}
+
+		async function saveConfig() {
+			var body = {
+				enabled: $("#cfgEnabled").is(":checked"), smtpHost: $("#cfgHost").val().trim(),
+				smtpPort: parseInt($("#cfgPort").val()) || 587, smtpUseTls: $("#cfgTls").is(":checked"),
+				smtpUsername: $("#cfgUser").val().trim(), smtpPassword: $("#cfgPass").val(),
+				fromAddress: $("#cfgFrom").val().trim(), fromName: $("#cfgFromName").val().trim(),
+				digestDayOfWeek: parseInt($("#cfgDay").val()), digestHour: parseInt($("#cfgHour").val())
+			};
+			let r = await fetch(notifyAPI + "config", { method: 'PUT', headers: jhdr(), body: JSON.stringify(body) });
+			if (r.ok) { $("#cfgPass").val(""); swal("Settings saved.", "Click OK to continue!", "success"); loadConfig(); }
+			else swal("Could not save settings.", "Click OK to continue!", "error");
+		}
+
+		async function sendTest() {
+			var to = $("#cfgTestTo").val().trim();
+			let r = await fetch(notifyAPI + "config/test", { method: 'POST', headers: jhdr(), body: JSON.stringify({ to: to }) });
+			if (r.ok) swal("Test email sent.", "Check the inbox.", "success");
+			else { var m = await r.text(); swal("Test failed. " + m, "Click OK to continue!", "error"); }
+		}
+
+		async function runDigest() {
+			let r = await fetch(notifyAPI + "digest/run", { method: 'POST', headers: hdr() });
+			if (r.ok) { swal("Weekly digest run triggered.", "Refresh the log in a moment.", "success"); setTimeout(loadLog, 5000); }
+			else swal("Could not run the digest.", "Click OK to continue!", "error");
+		}
+
+		$(document).ready(function () {
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					setupOpenRMFUI();
+					if (isAdministrator()) { $("#adminCard").show(); loadConfig(); }
+					fillSystems();
+					loadMine();
+					loadLog();
+				} else {
+					alert('You are not logged in. Please check your setup with Keycloak.');
+				}
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm as well as Redirect URI and Web Origins information.');
+			});
+		});
+	</script>
+</body>
+
+</html>

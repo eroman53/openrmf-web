@@ -22,6 +22,7 @@
     var inventoryAPI = root + '/api/inventory/';
     var tasksAPI = root + '/api/tasks/';
     var trivyscanAPI = root + '/api/trivyscan/';
+    var notifyAPI = root + '/api/notify/';
 
     // menu link to load Keycloak Groups and Users
     var urlKeycloakMenuLink = document.location.protocol + '//' + document.location.host + "/auth/admin/master/console/#/openrmf/users";
