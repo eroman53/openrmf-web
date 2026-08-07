@@ -130,6 +130,13 @@
 							<div class="card mb-3">
 								<div class="card-header">
 									<h3 id="checklistTitle" class="float-left"></h3>
+									<div class="float-right" id="lockControls" style="display:none;">
+										<span id="lockBadge" style="margin-right:6px;"></span>
+										<button type="button" class="btn btn-sm btn-outline-secondary" id="btnLock" onclick="lockChecklist();" style="display:none;"><i class="fa fa-lock"></i> Lock</button>
+										<button type="button" class="btn btn-sm btn-outline-danger" id="btnUnlock" onclick="unlockChecklist();" style="display:none;"><i class="fa fa-unlock"></i> Unlock</button>
+										<button type="button" class="btn btn-sm btn-primary" id="btnBulk" onclick="openBulk();" style="display:none;"><i class="fa fa-list-ul"></i> Bulk Edit</button>
+									</div>
+									<div class="clearfix"></div>
 								</div>
 								<div class="card-body">
 									<div style="display: none;" id="divBadChecklistId"
@@ -551,6 +558,7 @@
 					verifyUpdateChecklist();
 					// calls to get the checklist data from the API
 					getChecklistData(getParameterByName('id'), false);
+					loadLockAndBulk(getParameterByName('id'));
 					getChecklistScore(getParameterByName('id'));
 
 					$('#checklistFile').filer({
@@ -591,6 +599,165 @@
 		}); // document ready
 	</script>
 	<!-- END Java Script for this page -->
+
+	<!-- Bulk Edit Modal -->
+	<div class="modal fade" id="bulkEditModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Bulk Edit Vulnerabilities</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+				</div>
+				<div class="modal-body">
+					<div class="form-row">
+						<div class="form-group col-md-4">
+							<label for="bulkStatus">Set status to</label>
+							<select class="form-control" id="bulkStatus">
+								<option value="">(leave unchanged)</option>
+								<option value="Open">Open</option>
+								<option value="NotAFinding">Not a Finding</option>
+								<option value="Not_Applicable">Not Applicable</option>
+								<option value="Not_Reviewed">Not Reviewed</option>
+							</select>
+						</div>
+						<div class="form-group col-md-8">
+							<label for="bulkComment">Comment (applied to all selected)</label>
+							<input type="text" class="form-control" id="bulkComment">
+							<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="bulkApplyComment"><label class="custom-control-label" for="bulkApplyComment">Apply this comment</label></div>
+						</div>
+					</div>
+					<div class="mb-2">
+						<button type="button" class="btn btn-xs btn-secondary" onclick="bulkToggleAll(true);">Select all</button>
+						<button type="button" class="btn btn-xs btn-secondary" onclick="bulkToggleAll(false);">Clear</button>
+						&nbsp;by status:
+						<button type="button" class="btn btn-xs btn-outline-secondary" onclick="bulkSelectByStatus('Open');">Open</button>
+						<button type="button" class="btn btn-xs btn-outline-secondary" onclick="bulkSelectByStatus('Not_Reviewed');">Not Reviewed</button>
+						<button type="button" class="btn btn-xs btn-outline-secondary" onclick="bulkSelectByStatus('NotAFinding');">Not a Finding</button>
+						<button type="button" class="btn btn-xs btn-outline-secondary" onclick="bulkSelectByStatus('Not_Applicable');">Not Applicable</button>
+						<span class="float-right text-muted" id="bulkCount">0 selected</span>
+					</div>
+					<div class="table-responsive" style="max-height:340px; overflow-y:auto;">
+						<table class="table table-sm table-bordered" id="bulkTable">
+							<thead><tr><th></th><th>Vuln</th><th>Current</th><th>Title</th></tr></thead>
+							<tbody></tbody>
+						</table>
+					</div>
+					<div id="bulkPreviewResult" class="mt-2"></div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-info" onclick="bulkPreview();"><i class="fa fa-eye"></i> Preview</button>
+					<button type="button" class="btn btn-primary" id="btnBulkApply" onclick="bulkApply();" disabled><i class="fa fa-check"></i> Apply</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		var bulkArtifactId = "", bulkSystemGroupId = "", bulkVulns = [], checklistLocked = false;
+
+		async function loadLockAndBulk(id) {
+			bulkArtifactId = id;
+			let r = await fetch(readAPI + "artifact/" + id, { headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (!r.ok) return;
+			var a = await r.json();
+			bulkSystemGroupId = a.systemGroupId;
+			checklistLocked = !!a.locked;
+			bulkVulns = [];
+			try {
+				for (const v of a.checklist.stigs.iSTIG.vuln)
+					bulkVulns.push({ vulnid: v.stiG_DATA[0].attributE_DATA, status: v.status, title: v.stiG_DATA[5].attributE_DATA });
+			} catch (e) { }
+			renderLock(a);
+		}
+
+		function renderLock(a) {
+			$("#lockControls").show();
+			if (a.locked) {
+				var by = a.lockedByName ? " by " + htmlEscape(a.lockedByName) : "";
+				var on = a.lockedOn ? " on " + moment(a.lockedOn).format("MM/DD/YY") : "";
+				$("#lockBadge").html('<span class="badge badge-warning"><i class="fa fa-lock"></i> Locked' + by + on + '</span>');
+				$("#btnLock").hide(); $("#btnBulk").hide();
+				if (isAdministrator()) $("#btnUnlock").show(); else $("#btnUnlock").hide();
+			} else {
+				$("#lockBadge").html("");
+				$("#btnUnlock").hide();
+				if (canUpload()) { $("#btnLock").show(); $("#btnBulk").show(); }
+			}
+			applyVulnEditorState();
+		}
+
+		// best-effort read-only cue on the single-vuln editor; the API is the real
+		// enforcement (a locked checklist returns 409 on any edit)
+		function applyVulnEditorState() {
+			var editable = !checklistLocked && (typeof canUpload === "function" && canUpload());
+			["#frmVulnStatus", "#frmVulnDetails", "#frmVulnComments", "#frmVulnSecurityOverride", "#frmVulnSecurityJustification"].forEach(function (s) {
+				$(s).prop("disabled", !editable); $(s).prop("readonly", !editable);
+			});
+		}
+
+		async function lockChecklist() {
+			let r = await fetch(saveAPI + "artifact/" + bulkArtifactId + "/lock", { method: 'PUT', headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (r.ok) { swal("Checklist locked", "It is read-only until an Administrator unlocks it.", "success"); loadLockAndBulk(bulkArtifactId); }
+			else swal("Could not lock the checklist.", "Are you an Editor?", "error");
+		}
+		async function unlockChecklist() {
+			let r = await fetch(saveAPI + "artifact/" + bulkArtifactId + "/unlock", { method: 'PUT', headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+			if (r.ok) { swal("Checklist unlocked", "It is editable again.", "success"); loadLockAndBulk(bulkArtifactId); }
+			else swal("Could not unlock", "Unlock requires the Administrator role.", "error");
+		}
+
+		function openBulk() {
+			var rows = "";
+			bulkVulns.forEach(function (v) {
+				rows += '<tr><td><input type="checkbox" class="bulkChk" data-vulnid="' + htmlEscape(v.vulnid) + '" data-status="' + htmlEscape(v.status) + '" onchange="bulkCount();"></td><td>'
+					+ htmlEscape(v.vulnid) + '</td><td>' + htmlEscape(v.status) + '</td><td><small>' + htmlEscape(v.title || "") + '</small></td></tr>';
+			});
+			$("#bulkTable tbody").html(rows);
+			$("#bulkPreviewResult").html(""); $("#btnBulkApply").prop("disabled", true); bulkCount();
+			$("#bulkEditModal").modal("show");
+		}
+		function bulkCount() { $("#bulkCount").text($(".bulkChk:checked").length + " selected"); }
+		function bulkToggleAll(on) { $(".bulkChk").prop("checked", on); bulkCount(); }
+		function bulkSelectByStatus(st) { $(".bulkChk").each(function () { if (String($(this).data("status")) == st) $(this).prop("checked", true); }); bulkCount(); }
+
+		function bulkPayload() {
+			var targets = [];
+			$(".bulkChk:checked").each(function () { targets.push({ artifactId: bulkArtifactId, vulnid: String($(this).data("vulnid")) }); });
+			var status = $("#bulkStatus").val();
+			return {
+				systemGroupId: bulkSystemGroupId, targets: targets,
+				status: status, applyStatus: !!status,
+				comments: $("#bulkComment").val(), applyComments: $("#bulkApplyComment").is(":checked")
+			};
+		}
+		async function bulkPreview() {
+			var body = bulkPayload();
+			if (body.targets.length == 0) { swal("Select at least one vulnerability.", "Click OK to continue!", "warning"); return; }
+			if (!body.applyStatus && !body.applyComments) { swal("Choose a status and/or a comment to apply.", "Click OK to continue!", "warning"); return; }
+			let r = await fetch(saveAPI + "bulk/preview", { method: 'POST', headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+			if (!r.ok) { swal("Preview failed.", "Click OK to continue!", "error"); return; }
+			var p = await r.json();
+			var changed = p.changes.filter(function (c) { return c.oldStatus != c.newStatus; }).length;
+			var html = '<div class="alert alert-info">' + p.willChange + ' target(s) will be written; <b>' + changed + '</b> status change(s).';
+			if (p.skippedLocked > 0) html += ' ' + p.skippedLocked + ' skipped (locked).';
+			if (p.skippedMissing > 0) html += ' ' + p.skippedMissing + ' not found.';
+			html += '</div>';
+			$("#bulkPreviewResult").html(html);
+			$("#btnBulkApply").prop("disabled", p.willChange == 0);
+		}
+		async function bulkApply() {
+			var body = bulkPayload();
+			if (body.targets.length == 0) return;
+			let r = await fetch(saveAPI + "bulk/apply", { method: 'POST', headers: { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+			if (!r.ok) { swal("Apply failed.", "Click OK to continue!", "error"); return; }
+			var res = await r.json();
+			$("#bulkEditModal").modal("hide");
+			swal("Bulk edit applied", res.applied + " vulnerabilit(ies) updated across " + res.checklistsChanged + " checklist(s)."
+				+ (res.skippedLocked ? " " + res.skippedLocked + " skipped (locked)." : ""), "success");
+			setTimeout(function () { location.reload(); }, 1500);
+		}
+	</script>
 
 	<!-- Update Modal -->
 	<div class="modal fade customModal" id="editChecklistMetadata" tabindex="-1" role="dialog"
