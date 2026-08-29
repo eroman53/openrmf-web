@@ -23,6 +23,10 @@
                             class="fa fa-fw fa-heartbeat"></i><span> ConMon </span> </a>
                 </li>
                 <li class="submenu">
+                    <a id="mnuTrends" href="/trends.html" title="Scan vulnerability trends and history over time"><i
+                            class="fa fa-fw fa-line-chart"></i><span> Scan Trends </span> </a>
+                </li>
+                <li class="submenu">
                     <a id="mnuInventory" href="/inventory.html" title="Asset inventory: OS classes and fleet findings"><i
                             class="fa fa-fw fa-server"></i><span> Inventory </span> </a>
                 </li>
@@ -95,6 +99,8 @@
         $("#mnuPoam").addClass("active");
     } else if ( document.URL.includes("/conmon.html") ) {
         $("#mnuConmon").addClass("active");
+    } else if ( document.URL.includes("/trends.html") ) {
+        $("#mnuTrends").addClass("active");
     } else if ( document.URL.includes("/inventory.html") ) {
         $("#mnuInventory").addClass("active");
     } else if ( document.URL.includes("/tasks.html") ) {
