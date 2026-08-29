@@ -3191,3 +3191,35 @@ function doGlobalSearch() {
 	if (q.length < 2) return;
 	window.location = '/search.html?q=' + encodeURIComponent(q);
 }
+
+// Team subpackages (Phase 1): roll up open findings by subpackage for the
+// currently-listed system. On-demand (button) so it doesn't slow the listing.
+async function getSubpackageRollup(system) {
+	if (!system) { swal("Open a system's checklists first.", "Click OK to continue!", "warning"); return; }
+	$("#subpackageRollup").html('<div class="text-muted"><i class="fa fa-spinner fa-spin"></i> computing roll-up…</div>').show();
+	try {
+		let lr = await fetch(readAPI + "systems/" + encodeURIComponent(system), { headers: { 'Authorization': 'Bearer ' + keycloak.token } });
+		if (!lr.ok) { $("#subpackageRollup").html("").hide(); return; }
+		var items = await lr.json();
+		var rollup = {};
+		for (const it of items) {
+			var sp = (it.subpackage && it.subpackage.trim().length) ? it.subpackage.trim() : "(unassigned)";
+			if (!rollup[sp]) rollup[sp] = { count: 0, open: 0, cat1: 0, cat2: 0, cat3: 0 };
+			rollup[sp].count++;
+			var sc = await getScoreForChecklistListing(it.internalIdString);
+			if (sc) { rollup[sp].open += (sc.totalOpen || 0); rollup[sp].cat1 += (sc.totalCat1Open || 0); rollup[sp].cat2 += (sc.totalCat2Open || 0); rollup[sp].cat3 += (sc.totalCat3Open || 0); }
+		}
+		renderSubpackageRollup(rollup);
+	} catch (e) { $("#subpackageRollup").html("").hide(); }
+}
+function renderSubpackageRollup(rollup) {
+	var keys = Object.keys(rollup).sort();
+	if (keys.length === 0) { $("#subpackageRollup").html("").hide(); return; }
+	var tOpen = 0, t1 = 0, t2 = 0, t3 = 0, tc = 0, body = "";
+	keys.forEach(function (k) {
+		var r = rollup[k]; tOpen += r.open; t1 += r.cat1; t2 += r.cat2; t3 += r.cat3; tc += r.count;
+		body += '<tr><td><b>' + htmlEscape(k) + '</b></td><td>' + r.count + '</td><td>' + r.open + '</td><td>' + r.cat1 + '</td><td>' + r.cat2 + '</td><td>' + r.cat3 + '</td></tr>';
+	});
+	var html = '<div class="card mb-3"><div class="card-header"><h5 class="mb-0"><i class="fa fa-sitemap"></i> Subpackage Roll-up</h5></div><div class="card-body"><div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead><tr><th>Subpackage</th><th>Checklists</th><th>Open</th><th>CAT I</th><th>CAT II</th><th>CAT III</th></tr></thead><tbody>' + body + '</tbody><tfoot><tr class="font-weight-bold"><td>Total</td><td>' + tc + '</td><td>' + tOpen + '</td><td>' + t1 + '</td><td>' + t2 + '</td><td>' + t3 + '</td></tr></tfoot></table></div></div></div>';
+	$("#subpackageRollup").html(html).show();
+}

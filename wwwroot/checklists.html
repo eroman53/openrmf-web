@@ -282,10 +282,15 @@
 							<div class="card mb-3">
 								<div class="card-header">
 									<h3 class="float-left"><i class="fa fa-table"></i> Checklists</h3>
+									<button type="button" id="btnSubpackageRollup" class="btn btn-sm btn-outline-secondary float-right"
+										onclick="getSubpackageRollup(sessionStorage.getItem('currentSystem'));"
+										title="Roll up open findings by team subpackage"><i class="fa fa-sitemap"></i> Subpackage Roll-up</button>
+									<div class="clearfix"></div>
 								</div>
 								<div class="card-body">
 									<div id="divMessaging" class="alert alert-warning alert-dismissible fade show"
 										style="display: none;" role="alert"></div>
+									<div id="subpackageRollup" class="mb-3"></div>
 									<div class="table-responsive" id="divChecklistListing">
 										<table id="tblChecklistListing" style="width: 100%;"
 											class="table table-bordered table-hover display">
