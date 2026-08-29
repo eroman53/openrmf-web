@@ -121,6 +121,13 @@
 									<div id="checklistWebOrDBSite"></div>
 									<div id="checklistWebOrDBInstance"></div>
 									<div id="checklistTags"></div>
+									<div id="checklistSubpackageRow" class="mt-2" style="display:none;">
+										<b>Subpackage:</b> <span id="checklistSubpackage" class="text-muted">(none)</span>
+										<span id="subpackageEdit" style="display:none; margin-left:6px;">
+											<input type="text" id="frmSubpackage" class="form-control form-control-sm d-inline-block" style="width:150px;" maxlength="60" placeholder="enclave / site">
+											<button type="button" class="btn btn-xs btn-primary" onclick="saveSubpackage();"><i class="fa fa-check"></i> Set</button>
+										</span>
+									</div>
 									<br />
 									<div class="small" id="checklistLastUpdated"></div>
 								</div>
@@ -675,6 +682,11 @@
 		function renderLock(a) {
 			$("#lockControls").show();
 			if (typeof isAdministrator === "function" && isAdministrator()) $("#btnSaveTemplate").show();
+			// team subpackage
+			$("#checklistSubpackageRow").show();
+			$("#checklistSubpackage").text(a.subpackage && a.subpackage.length ? a.subpackage : "(none)");
+			$("#frmSubpackage").val(a.subpackage || "");
+			$("#subpackageEdit").toggle(typeof canUpload === "function" && canUpload() && !a.locked);
 			if (a.locked) {
 				var by = a.lockedByName ? " by " + htmlEscape(a.lockedByName) : "";
 				var on = a.lockedOn ? " on " + moment(a.lockedOn).format("MM/DD/YY") : "";
@@ -707,6 +719,19 @@
 			let r = await fetch(saveAPI + "artifact/" + bulkArtifactId + "/unlock", { method: 'PUT', headers: { 'Authorization': 'Bearer ' + keycloak.token } });
 			if (r.ok) { swal("Checklist unlocked", "It is editable again.", "success"); loadLockAndBulk(bulkArtifactId); }
 			else swal("Could not unlock", "Unlock requires the Administrator role.", "error");
+		}
+
+		// Assign this checklist to a team subpackage (enclave / site / sub-team).
+		async function saveSubpackage() {
+			var fd = new FormData();
+			fd.append("subpackage", $("#frmSubpackage").val().trim());
+			let r = await fetch(saveAPI + "artifact/" + bulkArtifactId + "/subpackage", { method: 'PUT', headers: { 'Authorization': 'Bearer ' + keycloak.token }, body: fd });
+			if (r.ok) {
+				var d = await r.json();
+				$("#checklistSubpackage").text(d.subpackage && d.subpackage.length ? d.subpackage : "(none)");
+				swal("Subpackage updated", "Click OK to continue!", "success");
+			} else if (r.status == 409) { swal("This checklist is locked.", "Unlock it first.", "warning"); }
+			else swal("Could not update the subpackage.", "Click OK to continue!", "error");
 		}
 
 		// Save this checklist (with its current answers) as a reusable template.
