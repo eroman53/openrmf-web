@@ -135,6 +135,7 @@
 										<button type="button" class="btn btn-sm btn-outline-secondary" id="btnLock" onclick="lockChecklist();" style="display:none;"><i class="fa fa-lock"></i> Lock</button>
 										<button type="button" class="btn btn-sm btn-outline-danger" id="btnUnlock" onclick="unlockChecklist();" style="display:none;"><i class="fa fa-unlock"></i> Unlock</button>
 										<button type="button" class="btn btn-sm btn-primary" id="btnBulk" onclick="openBulk();" style="display:none;"><i class="fa fa-list-ul"></i> Bulk Edit</button>
+										<button type="button" class="btn btn-sm btn-outline-info" id="btnSaveTemplate" onclick="saveAsTemplate();" style="display:none;" title="Save this checklist (with its answers) as a reusable template"><i class="fa fa-clone"></i> Save as Template</button>
 									</div>
 									<div class="clearfix"></div>
 								</div>
@@ -673,6 +674,7 @@
 
 		function renderLock(a) {
 			$("#lockControls").show();
+			if (typeof isAdministrator === "function" && isAdministrator()) $("#btnSaveTemplate").show();
 			if (a.locked) {
 				var by = a.lockedByName ? " by " + htmlEscape(a.lockedByName) : "";
 				var on = a.lockedOn ? " on " + moment(a.lockedOn).format("MM/DD/YY") : "";
@@ -705,6 +707,26 @@
 			let r = await fetch(saveAPI + "artifact/" + bulkArtifactId + "/unlock", { method: 'PUT', headers: { 'Authorization': 'Bearer ' + keycloak.token } });
 			if (r.ok) { swal("Checklist unlocked", "It is editable again.", "success"); loadLockAndBulk(bulkArtifactId); }
 			else swal("Could not unlock", "Unlock requires the Administrator role.", "error");
+		}
+
+		// Save this checklist (with its current answers) as a reusable template.
+		// New checklists created from the template inherit those answered defaults.
+		async function saveAsTemplate() {
+			swal("Save as Template", { content: "input", text: "Name this template:", buttons: ["Cancel", "Save"] }).then(async function (name) {
+				if (!name) return;
+				let r = await fetch(readAPI + "artifact/" + bulkArtifactId, { headers: { "Authorization": "Bearer " + keycloak.token } });
+				if (!r.ok) { swal("Could not read the checklist.", "Click OK to continue!", "error"); return; }
+				var a = await r.json();
+				if (!a.rawChecklist) { swal("This checklist has no content to save.", "Click OK to continue!", "error"); return; }
+				var fd = new FormData();
+				fd.append("type", a.stigType || "checklist");
+				fd.append("title", name);
+				fd.append("description", "Saved from " + (a.hostName || "checklist") + " (" + (a.stigType || "") + ")");
+				fd.append("checklistFile", new Blob([a.rawChecklist], { type: "application/xml" }), name.replace(/[^A-Za-z0-9_-]/g, "_") + ".ckl");
+				let t = await fetch(templateAPI, { method: "POST", headers: { "Authorization": "Bearer " + keycloak.token }, body: fd });
+				if (t.ok) swal("Template saved", "“" + name + "” is ready to use when creating checklists.", "success");
+				else { var m = await t.text(); swal("Could not save template.", "You may need the Administrator role. " + m, "error"); }
+			});
 		}
 
 		function openBulk() {
