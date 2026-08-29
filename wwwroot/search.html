@@ -1,0 +1,202 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>STOOGE Search</title>
+	<meta name="description" content="Full-text search across systems, checklists, and vulnerabilities">
+	<meta name="referrer" content="origin">
+	<link rel="shortcut icon" href="/assets/images/favicon-32.png" type="image/png">
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body class="adminbody">
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+		<div id="includeNavBarLink"></div>
+		<div id="includeSidebarLink"></div>
+
+		<div class="content-page">
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Search</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">Search</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-xl-12">
+							<form onsubmit="runSearch(); return false;" class="mb-3">
+								<div class="input-group">
+									<input type="text" id="q" class="form-control" placeholder="Search systems, checklists, vulnerabilities…" autocomplete="off">
+									<div class="input-group-append">
+										<button class="btn btn-primary" type="submit"><i class="fa fa-search"></i> Search</button>
+									</div>
+								</div>
+								<small class="form-text text-muted">Matches system names, hosts, STIG types, rule titles, Vuln IDs, CCIs, and control numbers. Results respect your package access.</small>
+							</form>
+							<div id="searchStatus" class="text-muted mb-2"></div>
+						</div>
+					</div>
+
+					<div class="row">
+						<!-- Vulnerabilities -->
+						<div class="col-xs-12 col-lg-12">
+							<div class="card mb-3" id="cardVulns" style="display:none;">
+								<div class="card-header"><h3><i class="fa fa-bug"></i> Vulnerabilities <span class="badge badge-secondary" id="cntVulns">0</span></h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table class="table table-sm table-hover table-bordered">
+											<thead><tr><th>Vuln</th><th>Rule Title</th><th>Host</th><th>Type</th><th>Severity</th><th>Status</th><th></th></tr></thead>
+											<tbody id="tbVulns"></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- Checklists -->
+						<div class="col-xs-12 col-lg-6">
+							<div class="card mb-3" id="cardChecklists" style="display:none;">
+								<div class="card-header"><h3><i class="fa fa-list-alt"></i> Checklists <span class="badge badge-secondary" id="cntChecklists">0</span></h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table class="table table-sm table-hover table-bordered">
+											<thead><tr><th>Host</th><th>STIG Type</th><th>System</th><th></th></tr></thead>
+											<tbody id="tbChecklists"></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- Systems -->
+						<div class="col-xs-12 col-lg-6">
+							<div class="card mb-3" id="cardSystems" style="display:none;">
+								<div class="card-header"><h3><i class="fa fa-cubes"></i> System Packages <span class="badge badge-secondary" id="cntSystems">0</span></h3></div>
+								<div class="card-body">
+									<div class="table-responsive">
+										<table class="table table-sm table-hover table-bordered">
+											<thead><tr><th>Title</th><th>Description</th><th></th></tr></thead>
+											<tbody id="tbSystems"></tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div id="noResults" class="text-muted" style="display:none;">No matches. Try a different term.</div>
+				</div>
+			</div>
+			<footer class="footer"><div id="includeFooterLink"></div></footer>
+			<div id="includeAutoLogin"></div>
+		</div>
+	</div>
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<script>
+		function sevBadge(s) {
+			var v = (s || "").toString().toLowerCase();
+			if (v == "high" || v == "critical") return "badge-danger";
+			if (v == "medium") return "badge-warning";
+			if (v == "low") return "badge-info";
+			return "badge-secondary";
+		}
+		function sevLabel(s) { var v = (s || "").toString(); return v ? v.charAt(0).toUpperCase() + v.slice(1) : ""; }
+		function hdr() { return { 'Authorization': 'Bearer ' + keycloak.token }; }
+
+		async function runSearch() {
+			var q = $("#q").val().trim();
+			if (q.length < 2) { $("#searchStatus").text("Enter at least 2 characters."); return; }
+			// keep the URL shareable
+			history.replaceState(null, "", "/search.html?q=" + encodeURIComponent(q));
+			$("#searchStatus").html('<i class="fa fa-spinner fa-spin"></i> searching…');
+			["#cardVulns", "#cardChecklists", "#cardSystems", "#noResults"].forEach(function (s) { $(s).hide(); });
+			let r = await fetch(searchAPI + "?q=" + encodeURIComponent(q) + "&limit=50", { headers: hdr() });
+			if (!r.ok) { $("#searchStatus").text("Search failed."); return; }
+			var d = await r.json();
+			renderVulns(d.vulnerabilities || []);
+			renderChecklists(d.checklists || []);
+			renderSystems(d.systems || []);
+			var total = (d.counts.systems + d.counts.checklists + d.counts.vulnerabilities);
+			$("#searchStatus").text(total + " result(s) for “" + q + "”");
+			if (total === 0) $("#noResults").show();
+		}
+
+		function renderVulns(rows) {
+			var tb = $("#tbVulns"); tb.empty();
+			rows.forEach(function (v) {
+				var statusBadge = v.status && v.status.toLowerCase() == "open" ? "badge-danger" : "badge-light";
+				tb.append('<tr><td><b>' + htmlEscape(v.vulnid || "") + '</b></td><td><small>' + htmlEscape(v.ruleTitle || "")
+					+ '</small></td><td>' + htmlEscape(v.hostname || "") + '</td><td><small>' + htmlEscape(v.checklistType || "")
+					+ '</small></td><td><span class="badge ' + sevBadge(v.severity) + '">' + htmlEscape(sevLabel(v.severity)) + '</span></td><td><span class="badge '
+					+ statusBadge + '">' + htmlEscape(v.status || "") + '</span></td><td>'
+					+ (v.artifactId ? '<a class="btn btn-xs btn-outline-primary" href="/single-checklist.html?id=' + encodeURIComponent(v.artifactId) + '">open</a>' : '')
+					+ '</td></tr>');
+			});
+			$("#cntVulns").text(rows.length); $("#cardVulns").toggle(rows.length > 0);
+		}
+
+		function renderChecklists(rows) {
+			var tb = $("#tbChecklists"); tb.empty();
+			rows.forEach(function (c) {
+				tb.append('<tr><td>' + htmlEscape(c.hostName || "") + '</td><td>' + htmlEscape(c.stigType || "")
+					+ '</td><td><small>' + htmlEscape(c.systemTitle || "") + '</small></td><td>'
+					+ '<a class="btn btn-xs btn-outline-primary" href="/single-checklist.html?id=' + encodeURIComponent(c.artifactId) + '">open</a></td></tr>');
+			});
+			$("#cntChecklists").text(rows.length); $("#cardChecklists").toggle(rows.length > 0);
+		}
+
+		function renderSystems(rows) {
+			var tb = $("#tbSystems"); tb.empty();
+			rows.forEach(function (s) {
+				tb.append('<tr><td><b>' + htmlEscape(s.title || "") + '</b></td><td><small>' + htmlEscape(s.description || "")
+					+ '</small></td><td><a class="btn btn-xs btn-outline-primary" href="/systems.html?id=' + encodeURIComponent(s.id) + '">view</a></td></tr>');
+			});
+			$("#cntSystems").text(rows.length); $("#cardSystems").toggle(rows.length > 0);
+		}
+
+		$(document).ready(function () {
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) {
+					setupOpenRMFUI();
+					var q = getParameterByName('q');
+					if (q) { $("#q").val(q); runSearch(); } else { $("#q").focus(); }
+				} else { alert('You are not logged in. Please check your setup with Keycloak.'); }
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm, Redirect URI and Web Origins.');
+			});
+		});
+	</script>
+</body>
+
+</html>

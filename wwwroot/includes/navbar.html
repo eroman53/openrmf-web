@@ -8,6 +8,15 @@
             <span style="color: #d63a22 !important;">STOOGE</span></a>
     </div>
     <nav class="navbar-custom">
+        <form class="float-left" style="margin: 12px 0 0 14px;" onsubmit="doGlobalSearch(); return false;">
+            <div class="input-group input-group-sm">
+                <input type="text" id="globalSearch" class="form-control" autocomplete="off"
+                    placeholder="Search systems, checklists, vulnerabilities…" style="min-width: 240px;">
+                <div class="input-group-append">
+                    <button class="btn btn-secondary" type="submit" title="Search"><i class="fa fa-search"></i></button>
+                </div>
+            </div>
+        </form>
         <ul class="list-inline float-right mb-0">
             <li class="list-inline-item dropdown notif">
                 <a class="nav-link dropdown-toggle arrow-none" data-toggle="dropdown" href="#" role="button"

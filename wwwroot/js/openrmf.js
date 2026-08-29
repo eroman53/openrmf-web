@@ -3183,3 +3183,11 @@ function setupProfileMenu()
 		$("#profileUserName").text(keycloak.tokenParsed.given_name);
 	}
 }
+// Phase 1 global full-text search: from the navbar box -> the results page
+function doGlobalSearch() {
+	var el = document.getElementById('globalSearch');
+	if (!el) return;
+	var q = el.value.trim();
+	if (q.length < 2) return;
+	window.location = '/search.html?q=' + encodeURIComponent(q);
+}
