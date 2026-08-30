@@ -57,12 +57,18 @@
 											<select id="trendScanType" class="form-control" onchange="onTrendChange();">
 												<option value="nessus">Nessus / ACAS</option>
 												<option value="trivy">Trivy (containers)</option>
+												<option value="sarif">SARIF (Checkov / CodeQL / SAST)</option>
 											</select>
 										</div>
 										<div class="form-group col-md-3 mb-0 text-right">
+											<button type="button" id="btnUploadScan" class="btn btn-outline-secondary" style="display:none;"
+												onclick="$('#scanFileInput').click();" title="Upload a scan file of the selected type for this package">
+												<i class="fa fa-upload"></i> Upload
+											</button>
+											<input type="file" id="scanFileInput" style="display:none;" onchange="uploadScanFile(this);" accept=".nessus,.xml,.json,.sarif" />
 											<button type="button" id="btnDownloadScan" class="btn btn-outline-primary" style="display:none;"
 												onclick="downloadLatestScan();" title="Download the latest raw scan file for this package">
-												<i class="fa fa-download"></i> Latest Scan File
+												<i class="fa fa-download"></i> Latest
 											</button>
 										</div>
 									</div>
@@ -197,9 +203,12 @@
 
 		function currentSel() { return { id: $("#trendSystem").val(), scanType: $("#trendScanType").val() }; }
 
+		function canUploadScans() { try { return canUpload(); } catch (e) { return false; } }
+
 		async function onTrendChange() {
 			var s = currentSel();
 			$("#trendContent").hide(); $("#trendEmpty").hide(); $("#btnDownloadScan").hide();
+			$("#btnUploadScan").toggle(!!s.id && canUploadScans());
 			if (!s.id) { $("#trendStatus").hide(); return; }
 			$("#trendStatus").html('<i class="fa fa-spinner fa-spin"></i> loading scan history…').show();
 			try {
@@ -298,6 +307,23 @@
 				});
 				$("#cntFindings").text(rows.length);
 			} catch (e) { $("#tbFindings").html('<tr><td colspan="7" class="text-danger">Error loading findings.</td></tr>'); }
+		}
+
+		async function uploadScanFile(input) {
+			var s = currentSel();
+			if (!s.id || !input.files || input.files.length === 0) return;
+			var fd = new FormData();
+			fd.append("scanType", s.scanType);
+			fd.append("scanFile", input.files[0]);
+			$("#trendStatus").html('<i class="fa fa-spinner fa-spin"></i> uploading & processing ' + s.scanType + ' scan…').show();
+			try {
+				let r = await fetch(scanhistoryAPI + "scan/" + encodeURIComponent(s.id), { method: 'POST', headers: hdr(), body: fd });
+				input.value = "";
+				if (!r.ok) { swal("Upload failed", "The scan could not be processed (" + r.status + ").", "error"); $("#trendStatus").hide(); return; }
+				var meta = await r.json();
+				swal("Scan processed", (meta.newFindings || 0) + " new, " + (meta.resolvedFindings || 0) + " resolved finding(s).", "success");
+				onTrendChange();
+			} catch (e) { input.value = ""; swal("Upload failed", "Could not upload the scan file.", "error"); $("#trendStatus").hide(); }
 		}
 
 		async function downloadLatestScan() {
