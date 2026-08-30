@@ -35,6 +35,10 @@
                             class="fa fa-fw fa-server"></i><span> Inventory </span> </a>
                 </li>
                 <li class="submenu">
+                    <a id="mnuPpsm" href="/ppsm.html" title="Ports, Protocols &amp; Services Management registry"><i
+                            class="fa fa-fw fa-plug"></i><span> PPSM </span> </a>
+                </li>
+                <li class="submenu">
                     <a id="mnuTasks" href="/tasks.html" title="Review task assignment and tracking"><i
                             class="fa fa-fw fa-check-square-o"></i><span> Tasks </span> </a>
                 </li>
@@ -109,6 +113,8 @@
         $("#mnuTrends").addClass("active");
     } else if ( document.URL.includes("/inventory.html") ) {
         $("#mnuInventory").addClass("active");
+    } else if ( document.URL.includes("/ppsm.html") ) {
+        $("#mnuPpsm").addClass("active");
     } else if ( document.URL.includes("/tasks.html") ) {
         $("#mnuTasks").addClass("active");
     } else if ( document.URL.includes("/containers.html") ) {

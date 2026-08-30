@@ -1,0 +1,290 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>STOOGE PPSM</title>
+	<meta name="description" content="Ports, Protocols and Services Management registry">
+	<meta name="referrer" content="origin">
+	<link rel="shortcut icon" href="/assets/images/favicon-32.png" type="image/png">
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body class="adminbody">
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+		<div id="includeNavBarLink"></div>
+		<div id="includeSidebarLink"></div>
+
+		<div class="content-page">
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">PPSM</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">PPSM</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="card mb-3">
+								<div class="card-body">
+									<div class="form-row align-items-end">
+										<div class="form-group col-md-6 mb-0">
+											<label for="ppsmSystem" class="mb-1"><b>System Package</b></label>
+											<select id="ppsmSystem" class="form-control" onchange="onSystemChange();"></select>
+										</div>
+										<div class="form-group col-md-6 mb-0 text-right" id="ppsmActions" style="display:none;">
+											<button type="button" class="btn btn-outline-primary" id="btnReconcile" onclick="reconcile();" title="Import open ports observed by the scanner">
+												<i class="fa fa-refresh"></i> Reconcile from Scans</button>
+											<button type="button" class="btn btn-outline-secondary" id="btnAdd" onclick="openAdd();">
+												<i class="fa fa-plus"></i> Add Entry</button>
+										</div>
+									</div>
+									<small class="form-text text-muted mt-2">Ports/Protocols/Services Management (DoDI 8551.01). Reconcile imports scan-observed open ports as "Under Review"; you then set each to Approved / Denied / Exception with a boundary and justification. Automation never overwrites your decisions. Results respect your package access.</small>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div id="ppsmStatus" class="text-muted mb-2" style="display:none;"></div>
+					<div id="ppsmEmpty" class="alert alert-info" style="display:none;">
+						<i class="fa fa-info-circle"></i> No PPSM entries yet. Click <b>Reconcile from Scans</b> to import observed open ports, or <b>Add Entry</b> to record one manually.
+					</div>
+
+					<div id="ppsmContent" style="display:none;">
+						<div class="row" id="ppsmSummary">
+							<div class="col"><div class="card mb-3 text-center"><div class="card-body py-2"><h3 class="mb-0" id="sumTotal">0</h3><small class="text-muted">Total</small></div></div></div>
+							<div class="col"><div class="card mb-3 text-center"><div class="card-body py-2"><h3 class="mb-0 text-success" id="sumApproved">0</h3><small class="text-muted">Approved</small></div></div></div>
+							<div class="col"><div class="card mb-3 text-center"><div class="card-body py-2"><h3 class="mb-0 text-danger" id="sumDenied">0</h3><small class="text-muted">Denied</small></div></div></div>
+							<div class="col"><div class="card mb-3 text-center"><div class="card-body py-2"><h3 class="mb-0 text-info" id="sumException">0</h3><small class="text-muted">Exception</small></div></div></div>
+							<div class="col"><div class="card mb-3 text-center"><div class="card-body py-2"><h3 class="mb-0 text-warning" id="sumReview">0</h3><small class="text-muted">Under Review</small></div></div></div>
+						</div>
+
+						<div class="card mb-3">
+							<div class="card-header"><h4 class="mb-0"><i class="fa fa-plug"></i> PPSM Registry <span class="badge badge-secondary" id="cntEntries">0</span></h4></div>
+							<div class="card-body">
+								<div class="table-responsive">
+									<table class="table table-sm table-hover table-bordered mb-0">
+										<thead><tr><th>Port</th><th>Proto</th><th>Service</th><th>Direction</th><th>Boundary</th><th>Status</th><th>Hosts</th><th>Source</th><th></th></tr></thead>
+										<tbody id="tbEntries"></tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</div>
+			<footer class="footer"><div id="includeFooterLink"></div></footer>
+			<div id="includeAutoLogin"></div>
+		</div>
+	</div>
+
+	<!-- edit / add modal -->
+	<div class="modal fade" id="ppsmModal" tabindex="-1" role="dialog">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="ppsmModalTitle">PPSM Entry</h5>
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+				</div>
+				<div class="modal-body">
+					<input type="hidden" id="frmId" />
+					<div class="form-row">
+						<div class="form-group col-md-4"><label for="frmPort">Port</label><input type="number" min="1" max="65535" class="form-control" id="frmPort" /></div>
+						<div class="form-group col-md-4"><label for="frmProto">Protocol</label>
+							<select class="form-control" id="frmProto"><option value="tcp">tcp</option><option value="udp">udp</option></select></div>
+						<div class="form-group col-md-4"><label for="frmService">Service</label><input type="text" class="form-control" id="frmService" placeholder="https, ssh…" /></div>
+					</div>
+					<div class="form-row">
+						<div class="form-group col-md-6"><label for="frmStatus">Status</label>
+							<select class="form-control" id="frmStatus"><option>Under Review</option><option>Approved</option><option>Denied</option><option>Exception</option></select></div>
+						<div class="form-group col-md-6"><label for="frmDirection">Direction</label>
+							<select class="form-control" id="frmDirection"><option value="">—</option><option>Inbound</option><option>Outbound</option><option>Local</option></select></div>
+					</div>
+					<div class="form-group"><label for="frmBoundary">Boundary</label><input type="text" class="form-control" id="frmBoundary" placeholder="Internet, DMZ, Internal…" /></div>
+					<div class="form-group"><label for="frmData">Data Description</label><input type="text" class="form-control" id="frmData" placeholder="what data crosses this port" /></div>
+					<div class="form-group"><label for="frmJustification">Justification / Approval Reference</label><textarea class="form-control" id="frmJustification" rows="2"></textarea></div>
+					<div id="frmDiscoveredNote" class="text-muted small" style="display:none;"></div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary" id="btnSave" onclick="saveEntry();">Save</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<script>
+		function hdr() { return { 'Authorization': 'Bearer ' + keycloak.token }; }
+		function jhdr() { return { 'Authorization': 'Bearer ' + keycloak.token, 'Content-Type': 'application/json' }; }
+		function curSys() { return $("#ppsmSystem").val(); }
+		function canEdit() { try { return canUpload(); } catch (e) { return false; } }
+
+		function statusBadge(s) {
+			var cls = { "Approved": "badge-success", "Denied": "badge-danger", "Exception": "badge-info", "Under Review": "badge-warning" }[s] || "badge-secondary";
+			return '<span class="badge ' + cls + '">' + htmlEscape(s || "") + '</span>';
+		}
+
+		async function loadSystems() {
+			let r = await fetch(readAPI + "systems", { headers: hdr() });
+			if (!r.ok) { $("#ppsmStatus").text("Could not load system packages.").show(); return; }
+			var data = await r.json();
+			var sel = $("#ppsmSystem"); sel.empty();
+			sel.append('<option value="">— choose a system package —</option>');
+			(data || []).forEach(function (s) { sel.append('<option value="' + s.internalIdString + '">' + htmlEscape(s.title) + '</option>'); });
+			var pre = getParameterByName('id');
+			if (pre) { sel.val(pre); onSystemChange(); }
+		}
+
+		async function onSystemChange() {
+			var id = curSys();
+			$("#ppsmContent").hide(); $("#ppsmEmpty").hide();
+			$("#ppsmActions").toggle(!!id && canEdit());
+			if (!id) { $("#ppsmStatus").hide(); return; }
+			await loadEntries();
+		}
+
+		async function loadEntries() {
+			var id = curSys();
+			$("#ppsmStatus").html('<i class="fa fa-spinner fa-spin"></i> loading registry…').show();
+			try {
+				var items = await (await fetch(ppsmAPI + "ppsm/system/" + encodeURIComponent(id), { headers: hdr() })).json();
+				if (!Array.isArray(items)) items = [];
+				renderSummary(items); renderEntries(items);
+				$("#ppsmStatus").hide();
+				if (items.length === 0) { $("#ppsmEmpty").show(); $("#ppsmContent").hide(); }
+				else { $("#ppsmEmpty").hide(); $("#ppsmContent").show(); }
+			} catch (e) { $("#ppsmStatus").text("Error loading the registry.").show(); }
+		}
+
+		function renderSummary(items) {
+			$("#sumTotal").text(items.length);
+			$("#sumApproved").text(items.filter(function (x) { return x.status === "Approved"; }).length);
+			$("#sumDenied").text(items.filter(function (x) { return x.status === "Denied"; }).length);
+			$("#sumException").text(items.filter(function (x) { return x.status === "Exception"; }).length);
+			$("#sumReview").text(items.filter(function (x) { return x.status === "Under Review"; }).length);
+		}
+
+		function renderEntries(items) {
+			var tb = $("#tbEntries"); tb.empty();
+			var editable = canEdit();
+			items.forEach(function (e) {
+				var hosts = (e.discoveredHosts || []);
+				var hostTxt = hosts.length ? (hosts.slice(0, 3).join(", ") + (hosts.length > 3 ? " +" + (hosts.length - 3) : "")) : "—";
+				var srcBadge = e.source === "discovered" ? '<span class="badge badge-light">scan</span>' : '<span class="badge badge-light">manual</span>';
+				var act = editable ? '<button class="btn btn-xs btn-outline-primary" onclick="openEdit(\'' + e.internalIdString + '\')"><i class="fa fa-pencil"></i></button>' : '';
+				tb.append('<tr><td><b>' + e.port + '</b></td><td>' + htmlEscape(e.protocol || "") + '</td><td>' + htmlEscape(e.service || "") + '</td>'
+					+ '<td>' + htmlEscape(e.direction || "—") + '</td><td>' + htmlEscape(e.boundary || "—") + '</td>'
+					+ '<td>' + statusBadge(e.status) + '</td><td><small>' + htmlEscape(hostTxt) + '</small></td><td>' + srcBadge + '</td><td>' + act + '</td></tr>');
+			});
+			$("#cntEntries").text(items.length);
+		}
+
+		var _entries = [];
+		async function reconcile() {
+			var id = curSys(); if (!id) return;
+			$.blockUI({ message: "Reconciling from scan-observed ports…", css: { padding: '15px' } });
+			try {
+				let r = await fetch(ppsmAPI + "ppsm/system/" + encodeURIComponent(id) + "/reconcile", { method: 'POST', headers: hdr() });
+				$.unblockUI();
+				if (!r.ok) { swal("Reconcile failed", "Could not reconcile (" + r.status + ").", "error"); return; }
+				var res = await r.json();
+				swal("Reconciled", res.created + " new port(s) imported, " + res.refreshed + " refreshed (" + res.discovered + " observed).", "success");
+				loadEntries();
+			} catch (e) { $.unblockUI(); swal("Reconcile failed", "Could not reconcile.", "error"); }
+		}
+
+		function openAdd() {
+			$("#ppsmModalTitle").text("Add PPSM Entry");
+			$("#frmId").val(""); $("#frmPort").val("").prop("disabled", false); $("#frmProto").val("tcp").prop("disabled", false);
+			$("#frmService").val(""); $("#frmStatus").val("Under Review"); $("#frmDirection").val("");
+			$("#frmBoundary").val(""); $("#frmData").val(""); $("#frmJustification").val("");
+			$("#frmDiscoveredNote").hide().text("");
+			$("#ppsmModal").modal("show");
+		}
+
+		async function openEdit(id) {
+			var items = await (await fetch(ppsmAPI + "ppsm/system/" + encodeURIComponent(curSys()), { headers: hdr() })).json();
+			var e = (items || []).find(function (x) { return x.internalIdString === id; });
+			if (!e) return;
+			$("#ppsmModalTitle").text("Edit PPSM Entry");
+			$("#frmId").val(e.internalIdString);
+			$("#frmPort").val(e.port).prop("disabled", true);
+			$("#frmProto").val(e.protocol).prop("disabled", true);
+			$("#frmService").val(e.service || "").prop("disabled", e.source !== "manual");
+			$("#frmStatus").val(e.status || "Under Review"); $("#frmDirection").val(e.direction || "");
+			$("#frmBoundary").val(e.boundary || ""); $("#frmData").val(e.dataDescription || ""); $("#frmJustification").val(e.justification || "");
+			if (e.source === "discovered") {
+				var hosts = (e.discoveredHosts || []).join(", ");
+				$("#frmDiscoveredNote").html('<i class="fa fa-info-circle"></i> Scan-discovered on: ' + htmlEscape(hosts || "(unknown)") + '. Port/protocol are owned by the scan and cannot be changed here.').show();
+			} else $("#frmDiscoveredNote").hide().text("");
+			$("#ppsmModal").modal("show");
+		}
+
+		async function saveEntry() {
+			var id = $("#frmId").val();
+			var body = {
+				port: parseInt($("#frmPort").val()) || 0,
+				protocol: $("#frmProto").val(),
+				service: $("#frmService").val().trim(),
+				status: $("#frmStatus").val(),
+				direction: $("#frmDirection").val(),
+				boundary: $("#frmBoundary").val().trim(),
+				dataDescription: $("#frmData").val().trim(),
+				justification: $("#frmJustification").val().trim()
+			};
+			var url, method;
+			if (id) { url = ppsmAPI + "ppsm/" + encodeURIComponent(id); method = 'PUT'; }
+			else {
+				if (!body.port) { swal("A port number is required.", "Click OK to continue!", "warning"); return; }
+				url = ppsmAPI + "ppsm/system/" + encodeURIComponent(curSys()); method = 'POST';
+			}
+			let r = await fetch(url, { method: method, headers: jhdr(), body: JSON.stringify(body) });
+			if (r.ok) { $("#ppsmModal").modal("hide"); swal("Saved.", "Click OK to continue!", "success"); loadEntries(); }
+			else { var m = await r.text(); swal("Save failed. " + m, "Click OK to continue!", "error"); }
+		}
+
+		$(document).ready(function () {
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) { setupOpenRMFUI(); loadSystems(); }
+				else { alert('You are not logged in. Please check your setup with Keycloak.'); }
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm, Redirect URI and Web Origins.');
+			});
+		});
+	</script>
+</body>
+
+</html>

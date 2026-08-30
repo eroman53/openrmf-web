@@ -20,6 +20,7 @@
     var scanwatchAPI = root + '/api/scanwatch/';
     var conmonAPI = root + '/api/conmon/';
     var inventoryAPI = root + '/api/inventory/';
+    var ppsmAPI = root + '/api/ppsm/';
     var tasksAPI = root + '/api/tasks/';
     var trivyscanAPI = root + '/api/trivyscan/';
     var notifyAPI = root + '/api/notify/';
