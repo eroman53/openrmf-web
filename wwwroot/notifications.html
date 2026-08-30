@@ -61,6 +61,7 @@
 											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtSysDel"><label class="custom-control-label" for="evtSysDel">System deleted</label></div>
 										<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtStale"><label class="custom-control-label" for="evtStale">Scan freshness alert (stale scans)</label></div>
 										<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtAging"><label class="custom-control-label" for="evtAging">POA&amp;M / findings aging alert (overdue)</label></div>
+										<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtAccept"><label class="custom-control-label" for="evtAccept">Risk acceptance expired (auto-reopened)</label></div>
 										</div>
 										<div class="form-group">
 											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="frmScopeAll" checked onchange="toggleScope();"><label class="custom-control-label" for="frmScopeAll">All system packages I can access</label></div>
@@ -199,6 +200,7 @@
 			if ($("#evtSysDel").is(":checked")) e.push("system.deleted");
 			if ($("#evtStale").is(":checked")) e.push("scan.stale");
 			if ($("#evtAging").is(":checked")) e.push("poam.aging");
+			if ($("#evtAccept").is(":checked")) e.push("acceptance.expiry");
 			return e;
 		}
 

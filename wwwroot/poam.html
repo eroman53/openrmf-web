@@ -195,6 +195,17 @@
 						</div>
 						<div class="form-row">
 							<div class="form-group col-md-6">
+								<label for="frmPoamReviewDate">Risk Acceptance Review Date</label>
+								<input type="date" class="form-control" id="frmPoamReviewDate" />
+								<small class="form-text text-muted">For "Risk Accepted" items: when the acceptance must be re-reviewed. On that date it is automatically reopened to "Ongoing" and subscribers are notified.</small>
+							</div>
+							<div class="form-group col-md-6">
+								<label> </label>
+								<div id="frmPoamReopenNote" class="alert alert-warning py-2 mb-0" style="display:none;"></div>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group col-md-6">
 								<label for="frmPoamSecurityControl">Security Control Acronym</label>
 								<input type="text" class="form-control" id="frmPoamSecurityControl" />
 							</div>
@@ -329,6 +340,8 @@
 			$("#frmPoamTitle").val("");
 			$("#frmPoamStatus").val("Draft");
 			$("#frmPoamScheduled").val("");
+			$("#frmPoamReviewDate").val("");
+			$("#frmPoamReopenNote").hide().text("");
 			$("#frmPoamSecurityControl").val("");
 			$("#frmPoamOfficeOrg").val("");
 			$("#frmPoamMilestones").val("");
@@ -354,6 +367,10 @@
 			$("#frmPoamTitle").val(item.title || "");
 			$("#frmPoamStatus").val(item.status || "Draft");
 			$("#frmPoamScheduled").val(item.scheduledCompletionDate ? moment(item.scheduledCompletionDate).format("YYYY-MM-DD") : "");
+			$("#frmPoamReviewDate").val(item.riskAcceptanceReviewDate ? moment(item.riskAcceptanceReviewDate).format("YYYY-MM-DD") : "");
+			if (item.riskAcceptanceReopenedOn)
+				$("#frmPoamReopenNote").text(item.riskAcceptanceNote || ("Auto-reopened on " + moment(item.riskAcceptanceReopenedOn).format("MM/DD/YYYY"))).show();
+			else $("#frmPoamReopenNote").hide().text("");
 			$("#frmPoamSecurityControl").val(item.securityControl || "");
 			$("#frmPoamOfficeOrg").val(item.officeOrg || "");
 			$("#frmPoamMilestones").val(item.milestones || "");
@@ -374,6 +391,7 @@
 				title: $("#frmPoamTitle").val(),
 				status: $("#frmPoamStatus").val(),
 				scheduledCompletionDate: $("#frmPoamScheduled").val() ? $("#frmPoamScheduled").val() : null,
+				riskAcceptanceReviewDate: $("#frmPoamReviewDate").val() ? $("#frmPoamReviewDate").val() : null,
 				securityControl: $("#frmPoamSecurityControl").val(),
 				officeOrg: $("#frmPoamOfficeOrg").val(),
 				milestones: $("#frmPoamMilestones").val(),
