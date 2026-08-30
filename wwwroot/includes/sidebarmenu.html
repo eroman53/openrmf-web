@@ -19,6 +19,10 @@
                             class="fa fa-fw fa-tasks"></i><span> POA&amp;M </span> </a>
                 </li>
                 <li class="submenu">
+                    <a id="mnuAuthorization" href="/authorization.html" title="Ongoing-authorization posture for the Authorizing Official (AO)"><i
+                            class="fa fa-fw fa-shield"></i><span> Authorization </span> </a>
+                </li>
+                <li class="submenu">
                     <a id="mnuConmon" href="/conmon.html" title="Continuous monitoring posture (SP 800-137)"><i
                             class="fa fa-fw fa-heartbeat"></i><span> ConMon </span> </a>
                 </li>
@@ -97,6 +101,8 @@
         $("#mnuCompliance").addClass("active");
     } else if ( document.URL.includes("/poam.html") ) {
         $("#mnuPoam").addClass("active");
+    } else if ( document.URL.includes("/authorization.html") ) {
+        $("#mnuAuthorization").addClass("active");
     } else if ( document.URL.includes("/conmon.html") ) {
         $("#mnuConmon").addClass("active");
     } else if ( document.URL.includes("/trends.html") ) {

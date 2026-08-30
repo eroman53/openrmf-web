@@ -1,0 +1,279 @@
+<!--
+	// Copyright (c) eroman53 2026. All rights reserved.
+	// Licensed under the GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 license. See LICENSE file in the project root for full license information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>STOOGE Ongoing Authorization</title>
+	<meta name="description" content="Ongoing-authorization posture rollup for the Authorizing Official (AO)">
+	<meta name="referrer" content="origin">
+	<link rel="shortcut icon" href="/assets/images/favicon-32.png" type="image/png">
+	<link href="/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/css/style.css" rel="stylesheet" type="text/css" />
+	<link href="/assets/plugins/sweetalert/sweetalert.css" rel="stylesheet" type="text/css" />
+	<style>
+		.ao-summary .card { border: none; }
+		.ao-summary h1 { font-size: 2.4rem; margin: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+		.ao-summary small { text-transform: uppercase; letter-spacing: .04em; color: #8a8f99; font-size: .72rem; }
+		.ao-stripe { border-left: 5px solid #ccc; }
+		.ao-stripe.red { border-left-color: #c62828; }
+		.ao-stripe.amber { border-left-color: #c77700; }
+		.ao-stripe.green { border-left-color: #2e7d32; }
+		.ao-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+		.ao-dot.red { background: #c62828; } .ao-dot.amber { background: #c77700; } .ao-dot.green { background: #2e7d32; }
+		#tblSystems td { vertical-align: middle; }
+		.driver-text { color: #8a8f99; font-size: .82rem; }
+	</style>
+</head>
+
+<body class="adminbody">
+	<script src="/assets/js/keycloak.min.js"></script>
+	<script src="/js/auth.js"></script>
+
+	<div id="main" style="display: none;">
+		<div id="includeNavBarLink"></div>
+		<div id="includeSidebarLink"></div>
+
+		<div class="content-page">
+			<div class="content">
+				<div class="container-fluid">
+					<div class="row">
+						<div class="col-xl-12">
+							<div class="breadcrumb-holder">
+								<h1 class="main-title float-left">Ongoing Authorization</h1>
+								<ol class="breadcrumb float-right">
+									<li class="breadcrumb-item">Home</li>
+									<li class="breadcrumb-item active">Authorization</li>
+								</ol>
+								<div class="clearfix"></div>
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-xl-12 mb-2">
+							<span class="text-muted">Authorizing-Official posture across your portfolio (NIST SP 800-137 ongoing authorization). Each system's overall status is the worst of its scan freshness, checklist currency, POA&amp;M schedule, finding SLAs, asset coverage, and STIG benchmark currency.</span>
+							<button type="button" class="btn btn-sm btn-outline-secondary float-right" onclick="loadPosture();"><i class="fa fa-refresh"></i> Refresh</button>
+							<a class="btn btn-sm btn-outline-secondary float-right mr-2" href="/conmon.html"><i class="fa fa-heartbeat"></i> Operational detail (ConMon)</a>
+							<div class="clearfix"></div>
+						</div>
+					</div>
+
+					<div id="aoStatus" class="text-muted mb-2" style="display:none;"></div>
+					<div id="aoEmpty" class="alert alert-info" style="display:none;">
+						<i class="fa fa-info-circle"></i> No system packages are visible to you yet.
+					</div>
+
+					<div id="aoContent" style="display:none;">
+						<!-- authorization posture summary -->
+						<div class="row ao-summary">
+							<div class="col-md-3 col-6"><div class="card mb-3"><div class="card-body py-3">
+								<h1 id="sTotal">0</h1><small>Systems</small></div></div></div>
+							<div class="col-md-3 col-6"><div class="card mb-3 ao-stripe green"><div class="card-body py-3">
+								<h1 id="sGreen" style="color:#2e7d32;">0</h1><small>Authorized posture</small></div></div></div>
+							<div class="col-md-3 col-6"><div class="card mb-3 ao-stripe amber"><div class="card-body py-3">
+								<h1 id="sAmber" style="color:#c77700;">0</h1><small>Needs attention</small></div></div></div>
+							<div class="col-md-3 col-6"><div class="card mb-3 ao-stripe red"><div class="card-body py-3">
+								<h1 id="sRed" style="color:#c62828;">0</h1><small>At risk</small></div></div></div>
+						</div>
+
+						<!-- risk drivers + posture chart -->
+						<div class="row">
+							<div class="col-lg-7">
+								<div class="card mb-3">
+									<div class="card-header"><h4 class="mb-0"><i class="fa fa-exclamation-triangle"></i> Portfolio Risk Drivers</h4></div>
+									<div class="card-body">
+										<div class="row text-center ao-summary">
+											<div class="col"><h1 id="dCrit" style="color:#c62828;">0</h1><small>Open Critical</small></div>
+											<div class="col"><h1 id="dHigh" style="color:#e67e22;">0</h1><small>Open High</small></div>
+											<div class="col"><h1 id="dPoam" style="color:#c62828;">0</h1><small>POA&amp;M Overdue</small></div>
+											<div class="col"><h1 id="dCoverage" style="color:#c77700;">0</h1><small>Coverage Gaps</small></div>
+											<div class="col"><h1 id="dBench" style="color:#c62828;">0</h1><small>Outdated STIGs</small></div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="col-lg-5">
+								<div class="card mb-3">
+									<div class="card-header"><h4 class="mb-0"><i class="fa fa-pie-chart"></i> Posture Distribution</h4></div>
+									<div class="card-body">
+										<div style="position:relative; height:230px;"><canvas id="postureChart"></canvas></div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- per-system rollup, risk-ranked -->
+						<div class="row">
+							<div class="col-md-12">
+								<div class="card mb-3">
+									<div class="card-header">
+										<h4 class="mb-0 d-inline"><i class="fa fa-list-ol"></i> Systems by Authorization Posture</h4>
+										<small class="text-muted float-right">most at-risk first</small>
+									</div>
+									<div class="card-body">
+										<div class="table-responsive">
+											<table class="table table-sm table-hover table-bordered mb-0" id="tblSystems">
+												<thead><tr>
+													<th>Posture</th><th>System Package</th><th>Scan</th><th>Checklists</th>
+													<th class="text-right">Findings (C/H)</th><th class="text-right">POA&amp;M (open/overdue)</th>
+													<th class="text-right">Coverage gaps</th><th class="text-right">STIGs (out/unk)</th><th>Key drivers</th><th></th>
+												</tr></thead>
+												<tbody id="tbSystems"></tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</div>
+			<footer class="footer"><div id="includeFooterLink"></div></footer>
+			<div id="includeAutoLogin"></div>
+		</div>
+	</div>
+
+	<script src="/assets/js/modernizr.min.js"></script>
+	<script src="/assets/js/jquery.min.js"></script>
+	<script src="/assets/js/popper.min.js"></script>
+	<script src="/assets/js/bootstrap.min.js"></script>
+	<script src="/assets/js/detect.js"></script>
+	<script src="/assets/js/fastclick.js"></script>
+	<script src="/assets/js/jquery.blockUI.js"></script>
+	<script src="/assets/js/jquery.nicescroll.js"></script>
+	<script src="/assets/plugins/chart.js/chart.min.js"></script>
+	<script src="/assets/js/pikeadmin.js"></script>
+	<script src="/js/openrmf.js"></script>
+	<script src="/js/apis.js"></script>
+	<script src="/assets/plugins/sweetalert/sweetalert.js"></script>
+
+	<script>
+		var _postureChart = null;
+		var RANK = { red: 0, amber: 1, green: 2 };
+
+		// map each posture component to a color, then the system's overall status
+		// is the worst of them (red > amber > green).
+		function componentColors(p) {
+			var scan = p.scan || {}, chk = p.checklists || {}, poam = p.poam || {}, find = p.findings || {}, cov = p.coverage || {}, bench = p.benchmarkCurrency || {};
+			var overdue = find.overdue || {};
+			var gap = (cov.scannedNoChecklist || 0) + (cov.checklistNotScanned || 0);
+			return {
+				scan: (scan.status === "red" || scan.status === "missing") ? "red" : (scan.status === "amber" ? "amber" : "green"),
+				checklist: chk.status === "red" ? "red" : (chk.status === "amber" ? "amber" : "green"),
+				poam: (poam.overdueScheduled || 0) > 0 ? "red" : ((poam.open || 0) > 0 ? "amber" : "green"),
+				findings: (overdue.cat1 || 0) > 0 ? "red" : (((overdue.cat2 || 0) + (overdue.cat3 || 0)) > 0 ? "amber" : "green"),
+				coverage: gap > 0 ? "amber" : "green",
+				benchmark: (bench.outdated || 0) > 0 ? "red" : ((bench.unknown || 0) > 0 ? "amber" : "green")
+			};
+		}
+		function overallOf(colors) {
+			var v = Object.keys(colors).map(function (k) { return colors[k]; });
+			if (v.indexOf("red") >= 0) return "red";
+			if (v.indexOf("amber") >= 0) return "amber";
+			return "green";
+		}
+		function driversOf(p) {
+			var d = [], scan = p.scan || {}, chk = p.checklists || {}, poam = p.poam || {}, o = (p.findings || {}).overdue || {}, cov = p.coverage || {}, bench = p.benchmarkCurrency || {};
+			if (scan.status === "missing") d.push("no scan"); else if (scan.status === "red" || scan.status === "amber") d.push("scan " + scan.status);
+			if (chk.status === "red" || chk.status === "amber") d.push("checklists " + chk.status);
+			if ((poam.overdueScheduled || 0) > 0) d.push(poam.overdueScheduled + " POA&M overdue");
+			if ((o.cat1 || 0) > 0) d.push(o.cat1 + " CAT I past SLA");
+			else if (((o.cat2 || 0) + (o.cat3 || 0)) > 0) d.push(((o.cat2 || 0) + (o.cat3 || 0)) + " CAT II/III past SLA");
+			var gap = (cov.scannedNoChecklist || 0) + (cov.checklistNotScanned || 0);
+			if (gap > 0) d.push(gap + " coverage gap(s)");
+			if ((bench.outdated || 0) > 0) d.push(bench.outdated + " outdated STIG(s)");
+			return d.length ? d.join(" · ") : "all clear";
+		}
+		function badge(color) {
+			var cls = { red: "badge-danger", amber: "badge-warning", green: "badge-success" }[color];
+			var txt = { red: "At risk", amber: "Attention", green: "Authorized" }[color];
+			return '<span class="badge ' + cls + '">' + txt + '</span>';
+		}
+		function statusBadge(s) {
+			var cls = { green: "badge-success", amber: "badge-warning", red: "badge-danger", missing: "badge-secondary" }[s] || "badge-secondary";
+			return '<span class="badge ' + cls + '">' + (s === "missing" ? "none" : (s || "n/a")) + '</span>';
+		}
+
+		async function loadPosture() {
+			$("#aoContent").hide(); $("#aoEmpty").hide();
+			$("#aoStatus").html('<i class="fa fa-spinner fa-spin"></i> computing portfolio posture…').show();
+			let r;
+			try { r = await fetch(conmonAPI + "conmon/posture", { headers: { 'Authorization': 'Bearer ' + keycloak.token } }); }
+			catch (e) { $("#aoStatus").text("Could not load posture.").show(); return; }
+			if (!r.ok) { $("#aoStatus").text("Could not load posture (" + r.status + ").").show(); return; }
+			var systems = await r.json();
+			if (!Array.isArray(systems) || systems.length === 0) { $("#aoStatus").hide(); $("#aoEmpty").show(); return; }
+
+			// enrich + rank
+			systems.forEach(function (p) { p._colors = componentColors(p); p._overall = overallOf(p._colors); });
+			systems.sort(function (a, b) {
+				if (RANK[a._overall] !== RANK[b._overall]) return RANK[a._overall] - RANK[b._overall];
+				var af = (a.findings || {}), bf = (b.findings || {});
+				return (bf.critical || 0) - (af.critical || 0) || (bf.high || 0) - (af.high || 0);
+			});
+
+			var g = 0, am = 0, rd = 0, crit = 0, high = 0, poamOver = 0, covGap = 0, benchOut = 0;
+			systems.forEach(function (p) {
+				if (p._overall === "green") g++; else if (p._overall === "amber") am++; else rd++;
+				crit += (p.findings || {}).critical || 0; high += (p.findings || {}).high || 0;
+				poamOver += (p.poam || {}).overdueScheduled || 0;
+				if (((p.coverage || {}).scannedNoChecklist || 0) + ((p.coverage || {}).checklistNotScanned || 0) > 0) covGap++;
+				benchOut += (p.benchmarkCurrency || {}).outdated || 0;
+			});
+
+			$("#sTotal").text(systems.length); $("#sGreen").text(g); $("#sAmber").text(am); $("#sRed").text(rd);
+			$("#dCrit").text(crit); $("#dHigh").text(high); $("#dPoam").text(poamOver); $("#dCoverage").text(covGap); $("#dBench").text(benchOut);
+			renderPostureChart(g, am, rd);
+			renderSystems(systems);
+			$("#aoStatus").hide(); $("#aoContent").show();
+		}
+
+		function renderPostureChart(g, am, rd) {
+			var cfg = {
+				type: 'doughnut',
+				data: { labels: ["Authorized", "Needs attention", "At risk"], datasets: [{ data: [g, am, rd], backgroundColor: ["#2e7d32", "#c77700", "#c62828"] }] },
+				options: { responsive: true, maintainAspectRatio: false, legend: { position: 'bottom', labels: { fontSize: 11 } } }
+			};
+			if (_postureChart) _postureChart.destroy();
+			_postureChart = new Chart(document.getElementById("postureChart").getContext('2d'), cfg);
+		}
+
+		function renderSystems(systems) {
+			var tb = $("#tbSystems"); tb.empty();
+			systems.forEach(function (p) {
+				var f = p.findings || {}, poam = p.poam || {}, cov = p.coverage || {}, bench = p.benchmarkCurrency || {};
+				var gap = (cov.scannedNoChecklist || 0) + (cov.checklistNotScanned || 0);
+				tb.append('<tr class="ao-stripe ' + p._overall + '">'
+					+ '<td>' + badge(p._overall) + '</td>'
+					+ '<td><b>' + htmlEscape(p.title || "") + '</b></td>'
+					+ '<td>' + statusBadge((p.scan || {}).status) + '</td>'
+					+ '<td>' + statusBadge((p.checklists || {}).status) + '</td>'
+					+ '<td class="text-right">' + (f.critical || 0) + ' / ' + (f.high || 0) + '</td>'
+					+ '<td class="text-right">' + (poam.open || 0) + ' / <span class="' + ((poam.overdueScheduled || 0) > 0 ? "text-danger font-weight-bold" : "") + '">' + (poam.overdueScheduled || 0) + '</span></td>'
+					+ '<td class="text-right">' + (gap > 0 ? '<span class="text-warning font-weight-bold">' + gap + '</span>' : '0') + '</td>'
+					+ '<td class="text-right">' + (bench.outdated || 0) + ' / ' + (bench.unknown || 0) + '</td>'
+					+ '<td><span class="driver-text">' + htmlEscape(driversOf(p)) + '</span></td>'
+					+ '<td><a class="btn btn-xs btn-outline-primary" href="/trends.html?id=' + encodeURIComponent(p.systemGroupId) + '" title="Scan trends for this system"><i class="fa fa-line-chart"></i></a></td>'
+					+ '</tr>');
+			});
+		}
+
+		$(document).ready(function () {
+			keycloak.init({ onLoad: 'login-required' }).then(function (authenticated) {
+				if (authenticated) { setupOpenRMFUI(); loadPosture(); }
+				else { alert('You are not logged in. Please check your setup with Keycloak.'); }
+			}).catch(function () {
+				alert('Keycloak did not respond correctly. Please verify your Keycloak realm, Redirect URI and Web Origins.');
+			});
+		});
+	</script>
+</body>
+
+</html>
