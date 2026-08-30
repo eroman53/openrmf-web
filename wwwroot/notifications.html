@@ -59,6 +59,8 @@
 											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtDeleted"><label class="custom-control-label" for="evtDeleted">Checklist deleted</label></div>
 											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtPatch" checked><label class="custom-control-label" for="evtPatch">Patch scan updated</label></div>
 											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtSysDel"><label class="custom-control-label" for="evtSysDel">System deleted</label></div>
+										<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtStale"><label class="custom-control-label" for="evtStale">Scan freshness alert (stale scans)</label></div>
+										<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="evtAging"><label class="custom-control-label" for="evtAging">POA&amp;M / findings aging alert (overdue)</label></div>
 										</div>
 										<div class="form-group">
 											<div class="custom-control custom-checkbox"><input type="checkbox" class="custom-control-input" id="frmScopeAll" checked onchange="toggleScope();"><label class="custom-control-label" for="frmScopeAll">All system packages I can access</label></div>
@@ -143,6 +145,15 @@
 												</div>
 											</div>
 										</div>
+										<div class="form-row align-items-end">
+											<div class="form-group col-md-4">
+												<div class="custom-control custom-checkbox" style="margin-top:0.4rem;"><input type="checkbox" class="custom-control-input" id="cfgPostureEnabled" checked><label class="custom-control-label" for="cfgPostureEnabled">Daily posture-watch alerts (staleness &amp; POA&amp;M aging)</label></div>
+											</div>
+											<div class="form-group col-md-3"><label for="cfgPostureHour">Posture-watch hour (0-23)</label><input type="number" class="form-control" id="cfgPostureHour" min="0" max="23" value="8"></div>
+											<div class="form-group col-md-5"><label>&nbsp;</label>
+												<div><button class="btn btn-outline-secondary" type="button" onclick="runPostureNow();"><i class="fa fa-bell"></i> Run posture watch now</button></div>
+											</div>
+										</div>
 										<button type="button" class="btn btn-sm btn-primary" onclick="saveConfig();"><i class="fa fa-save"></i> Save Settings</button>
 										<button type="button" class="btn btn-sm btn-danger" onclick="runDigest();"><i class="fa fa-play"></i> Run Weekly Digest Now</button>
 										<span id="cfgStatus" class="text-muted" style="margin-left:10px;"></span>
@@ -186,6 +197,8 @@
 			if ($("#evtDeleted").is(":checked")) e.push("checklist.deleted");
 			if ($("#evtPatch").is(":checked")) e.push("system.patchscan");
 			if ($("#evtSysDel").is(":checked")) e.push("system.deleted");
+			if ($("#evtStale").is(":checked")) e.push("scan.stale");
+			if ($("#evtAging").is(":checked")) e.push("poam.aging");
 			return e;
 		}
 
@@ -259,8 +272,10 @@
 			$("#cfgHost").val(c.smtpHost); $("#cfgPort").val(c.smtpPort); $("#cfgTls").prop("checked", c.smtpUseTls);
 			$("#cfgUser").val(c.smtpUsername); $("#cfgFrom").val(c.fromAddress); $("#cfgFromName").val(c.fromName);
 			$("#cfgDay").val(c.digestDayOfWeek); $("#cfgHour").val(c.digestHour);
+			$("#cfgPostureEnabled").prop("checked", c.postureWatchEnabled); $("#cfgPostureHour").val(c.postureWatchHour);
 			if (c.hasPassword) $("#cfgPass").attr("placeholder", "unchanged (a password is set)");
-			$("#cfgStatus").text(c.lastDigestRun ? "last digest " + moment(c.lastDigestRun).format("MM/DD/YY HH:mm") : "digest not run yet");
+			$("#cfgStatus").text((c.lastDigestRun ? "last digest " + moment(c.lastDigestRun).format("MM/DD/YY HH:mm") : "digest not run yet")
+				+ (c.lastPostureWatchRun ? " · last posture watch " + moment(c.lastPostureWatchRun).format("MM/DD/YY HH:mm") : ""));
 		}
 
 		async function saveConfig() {
@@ -269,7 +284,8 @@
 				smtpPort: parseInt($("#cfgPort").val()) || 587, smtpUseTls: $("#cfgTls").is(":checked"),
 				smtpUsername: $("#cfgUser").val().trim(), smtpPassword: $("#cfgPass").val(),
 				fromAddress: $("#cfgFrom").val().trim(), fromName: $("#cfgFromName").val().trim(),
-				digestDayOfWeek: parseInt($("#cfgDay").val()), digestHour: parseInt($("#cfgHour").val())
+				digestDayOfWeek: parseInt($("#cfgDay").val()), digestHour: parseInt($("#cfgHour").val()),
+				postureWatchEnabled: $("#cfgPostureEnabled").is(":checked"), postureWatchHour: parseInt($("#cfgPostureHour").val())
 			};
 			let r = await fetch(notifyAPI + "config", { method: 'PUT', headers: jhdr(), body: JSON.stringify(body) });
 			if (r.ok) { $("#cfgPass").val(""); swal("Settings saved.", "Click OK to continue!", "success"); loadConfig(); }
@@ -287,6 +303,12 @@
 			let r = await fetch(notifyAPI + "digest/run", { method: 'POST', headers: hdr() });
 			if (r.ok) { swal("Weekly digest run triggered.", "Refresh the log in a moment.", "success"); setTimeout(loadLog, 5000); }
 			else swal("Could not run the digest.", "Click OK to continue!", "error");
+		}
+
+		async function runPostureNow() {
+			let r = await fetch(notifyAPI + "posture/run", { method: 'POST', headers: hdr() });
+			if (r.ok) { swal("Posture watch triggered.", "Refresh the log in a moment.", "success"); setTimeout(loadLog, 5000); }
+			else swal("Could not run the posture watch.", "Click OK to continue!", "error");
 		}
 
 		$(document).ready(function () {
